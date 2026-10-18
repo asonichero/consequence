@@ -316,9 +316,9 @@ function create(view, opts) {
   // A place is where the giver is (seated, or standing at the table) and where Jack is. His stances: 'standSeat' (upright between her knees, facing her), 'lap' (face
   // down across her right knee), 'table' (bent forward over the table's edge, chest on the top, feet on the floor), 'standTable' (upright beside the table, facing her).
   // moving between two blends his body (and the hands she lays on him) over a few seconds.
-  const FLOOR = -LEGH, TABLE_H = 14.2, TABLE_TOP = FLOOR + TABLE_H, LEAN_STAND = 0.32, STOOL_H = 6, STOOL_LEAN = 1.3;       // (the stool's seat is 6 up; kneeling on it he leans 1.3 radians forward, his hands on the table)
-  const PLACES = { seat: { giver: 'sit', jack: 'standSeat' }, lap: { giver: 'sit', jack: 'lap' }, table: { giver: 'stand', jack: 'table' }, stool: { giver: 'stand', jack: 'stool' }, after: { giver: 'stand', jack: 'standTable' } };
-  const GIVER_AT = { sit: new V3(0, 0, 0), stand: new V3(-3, FLOOR, -10) };
+  const FLOOR = -LEGH, TABLE_H = 14.2, TABLE_TOP = FLOOR + TABLE_H, LEAN_STAND = 0.32, KIT = 1.4, STOOL_H = 22 / KIT, KT_TOP = 25.9 / KIT, STOOL_LEAN = 1.3;       // (the castle's kitchen is drawn 1.4 times this scale: its tall stool's seat is 22 up, the cloth on its table 25.9; kneeling on the stool he leans 1.3 radians forward, his hands on the table)
+  const PLACES = { seat: { giver: 'sit', jack: 'standSeat' }, lap: { giver: 'sit', jack: 'lap' }, table: { giver: 'stand', jack: 'table' }, stool: { giver: 'standStool', jack: 'stool' }, after: { giver: 'stand', jack: 'standTable' } };
+  const GIVER_AT = { sit: new V3(0, 0, 0), stand: new V3(-3, FLOOR, -10), standStool: new V3(0.5, FLOOR, -14) };       // (at the kitchen table she stands at his left, a little ahead of his hips)
   const AXX = new V3(1, 0, 0), AXY = new V3(0, 1, 0), AXZ = new V3(0, 0, 1), axq = (ax, a) => new THREE.Quaternion().setFromAxisAngle(ax, a);
   const lapQ = pitch => axq(AXZ, pitch).multiply(axq(AXY, Math.PI / 2)).multiply(axq(AXX, Math.PI / 2)), uprightQ = axq(AXY, Math.PI);
   const tablePitch = sz => clamp(Math.asin(clamp((TABLE_TOP + 2 * sz - (FLOOR + 12 * sz)) / (11 * sz), -1, 1)), 0, 0.8);
@@ -328,7 +328,7 @@ function create(view, opts) {
       case 'standSeat': return { p: new V3(0, FLOOR + 12 * sz, 18.5), q: uprightQ };       // (a little back from her knees, so that her head and his do not meet as she works at his belt)
       case 'standTable': return { p: new V3(-6 * sz, FLOOR + 12 * sz, 0), q: uprightQ };
       case 'table': return { p: new V3(-6 * sz, FLOOR + 12 * sz, 0), q: lapQ(tablePitch(sz)) };
-      case 'stool': return { p: new V3(-7 * sz, FLOOR + STOOL_H + 8 * sz, 0), q: axq(AXY, Math.PI / 2) };       // (kneeling on the stool, facing the table: his knees on the seat, his shins back along it)
+      case 'stool': return { p: new V3(-3.6, FLOOR + STOOL_H + 8 * sz, 0), q: axq(AXY, Math.PI / 2) };       // (kneeling on the stool, facing the table: his knees on the seat, his shins back along it)
       default: return { p: new V3(-6 * sz, 8.75 + 2 * sz, P.z), q: lapQ(PITCH) };
     }
   }
@@ -354,8 +354,8 @@ function create(view, opts) {
     }
     if (name === 'stool') {
       // Kneeling up on the stool: thighs straight down onto the seat, shins back along it, the trunk leaned forward over the table and his hands flat on it (the arms are found from where the table is, at his size); only his head, his trunk and his knees react.
-      const lean = STOOL_LEAN - 0.06 * k, shX = -7 * sz + 10 * sz * Math.sin(lean), shY = STOOL_H + 8 * sz + 10 * sz * Math.cos(lean);       // (his shoulder, from the floor and from the table's edge, which is 12.6 of him ahead of his hips)
-      const dx = (12.6 + 5) * sz - 7 * sz - shX, dy = TABLE_H + 0.6 - shY, arm = clamp(-Math.atan2(dx, -dy) - lean, -3.0, -0.2);
+      const lean = STOOL_LEAN - 0.06 * k, shX = -3.6 + 10 * sz * Math.sin(lean), shY = STOOL_H + 8 * sz + 10 * sz * Math.cos(lean);       // (his shoulder, from the table's edge, and from the floor)
+      const dx = Math.max(2, 4.5 - shX), dy = KT_TOP + 0.3 - shY, arm = clamp(-Math.atan2(dx, -dy) - lean, -3.0, -0.2);
       return { tL: 0.02, tR: 0.02, zL: 0.1, zR: -0.1, kL: 1.55 + 0.1 * dd, kR: 1.55 + 0.1 * dd,
         nx: -0.75 - 0.25 * k + 0.04 * dd * Math.sin(t * 4), ny: -0.4 + 0.08 * Math.sin(t * 3) * dd, aLx: arm, aRx: arm,
         aLz: 0.16, aRz: -0.16, tz: 0.02 * dd * Math.sin(t * 6), tx: lean, eL: -0.25, eR: -0.25 };
@@ -378,12 +378,13 @@ function create(view, opts) {
     tb(22, 2.4, 30, 11, TABLE_TOP - 1.2, 0, wood); for (const [x, z] of [[2.4, -12.6], [19.6, -12.6], [2.4, 12.6], [19.6, 12.6]]) tb(2.6, TABLE_H - 2.4, 2.6, x, FLOOR + (TABLE_H - 2.4) / 2, z, legs); table.visible = false;
   }
 
-  // The stool he kneels on (standalone; in the game the kitchen's own stool is used): a seat 14 square and 1.6 thick, on four legs, its top STOOL_H above the floor.
-  let stool = null;
+  // The kitchen's own tall stool and table, to scale (the castle's, drawn at 1/1.4): a stool whose seat is 7 square, a table whose cloth is 20 deep from the edge he kneels at and 57 across, on four legs.
+  let stool = null, ktable = null;
   if (opts.table !== false) {
-    stool = new THREE.Group(); stage.add(stool); const sw = new THREE.MeshLambertMaterial({ color: srgb(0x7a5a3a) }), sl = new THREE.MeshLambertMaterial({ color: srgb(0x4a3422) });
-    const sb = (w, h, d, x, y, z, m) => { const q = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); q.position.set(x, y, z); stool.add(q); };
-    sb(14, 1.6, 14, 0, FLOOR + STOOL_H - 0.8, 0, sw); for (const [x, z] of [[-5.6, -5.6], [5.6, -5.6], [-5.6, 5.6], [5.6, 5.6]]) sb(1.6, STOOL_H - 1.6, 1.6, x, FLOOR + (STOOL_H - 1.6) / 2, z, sl); stool.visible = false;
+    const sw = new THREE.MeshLambertMaterial({ color: srgb(0x7a5a3a) }), sl = new THREE.MeshLambertMaterial({ color: srgb(0x4a3422) }), tt = new THREE.MeshLambertMaterial({ color: srgb(0x5a3c26) }), cl = new THREE.MeshLambertMaterial({ color: srgb(0x7a1f3a) });
+    const bx = (g, w, h, d, x, y, z, m) => { const q = new THREE.Mesh(new THREE.BoxGeometry(w / KIT, h / KIT, d / KIT), m); q.position.set(x / KIT, FLOOR + y / KIT, z / KIT); g.add(q); };
+    stool = new THREE.Group(); stage.add(stool); bx(stool, 10, 2, 10, 0, 21, 0, sw); for (const sx of [-1, 1]) for (const sz2 of [-1, 1]) bx(stool, 1.6, 21, 1.6, sx * 4, 10.5, sz2 * 4, sl); stool.visible = false;
+    ktable = new THREE.Group(); stage.add(ktable); bx(ktable, 28, 3, 76, 0, 24, 0, tt); bx(ktable, 28.4, 1, 80, 0, 25.4, 0, cl); for (const sx of [-1, 1]) for (const sz2 of [-1, 1]) bx(ktable, 4, 24, 4, sx * 9, 12, sz2 * 32, sl); ktable.visible = false;
   }
 
   function birchFlex(sw, tau) {                      // the twigs trail on the way up, bow forward on the skin, and settle
@@ -547,7 +548,7 @@ function create(view, opts) {
   };
   const STANDING = { standSeat: 1, standTable: 1 };
   jack.after = function (j) {
-    glutesTilt.visible = !STANDING[stanceNow()];      // (the glutes block bridges his back and his thighs once they fold: upright, it would only cut into his legs)
+    glutesTilt.visible = !STANDING[stanceNow()] && !(stanceNow() === 'stool' && st.trousers !== 'down');      // (the glutes block bridges his back and his thighs once they fold: upright, it would only cut into his legs)
     const sf = 1 - 0.72 * (st.settle || 0);      // (settled: he lies still over her lap, and only the contact itself moves him)
     const k = J.kick * sf, d = clamp(pain.distress(), 0, 1.5) * sf, w = (Math.sin(J.t * 9) * 0.05 * Math.min(1, d) + Math.sin(J.t * 5.3) * 0.03 * Math.min(1, d)) * sf, sz = st.size * jackFull;
     const e = easeIO(clamp(st.blend, 0, 1)), p = mixPose(limbs(st.from, k, d, w, sz), limbs(st.to, k, d, w, sz), e);
@@ -604,8 +605,10 @@ function create(view, opts) {
     // The giver's place: seated in the chair (her shins long enough to reach its floor), or standing at the table's side.
     gerda.root.position.copy(GIVER_AT[st.giverStance]); chair.visible = st.giverStance === 'sit' && opts.noChair !== true;
     if (st.shinsSeated !== (st.giverStance === 'sit')) { st.shinsSeated = st.giverStance === 'sit'; setShins(st.shinsSeated); }
-    if (table) { table.visible = st.showTable !== false && (overTable(st.to) || overTable(st.from) || st.showTable === true); table.position.x = overTable(stanceNow()) && stanceNow() === 'stool' ? 5.6 * sz : tableEdgeX(sz); }
-    if (stool) { stool.visible = (st.to === 'stool' || st.from === 'stool') && st.showTable !== false; stool.position.x = -7 * sz - 2.5 * sz; }
+    { const onStool = st.to === 'stool' || st.from === 'stool', onTable = st.to === 'table' || st.from === 'table', want = st.showTable !== false;
+      if (table) { table.visible = want && onTable || (st.showTable === true && !onStool); table.position.x = tableEdgeX(sz); }
+      if (stool) { stool.visible = want && onStool; stool.position.x = -3.6; }
+      if (ktable) { ktable.visible = want && onStool; ktable.position.x = 14 / KIT; } }
     B.step(jack, dt); scene.updateMatrixWorld(true);
     B.step(gerda, dt);
     updateHandles(); if (!ext) { controls.update(); renderer.render(scene, camera); }
