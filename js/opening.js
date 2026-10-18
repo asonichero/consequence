@@ -53,7 +53,7 @@ async function run(G, W) {
   G.skipping = false;       // (a Skip applies to the scene it was pressed in)
   const { ext, int, acts, paintJack, mother } = W;
   const sx = ext.windowTarget;
-  G.mode = 'cutscene'; document.body.classList.add('cutscene');
+  G.mode = 'cutscene';
   // 1. Down from the sky to the window. The wind, the birds; and, as we near the glass, muffled through the wall, the sound of a correction coming to its end.
   A && A.ambience({ wind: 0.8, birds: 0.6, fire: 0 }); A && A.duckMusic(0.35, 4);
   G.drone = null;
@@ -114,7 +114,7 @@ async function run(G, W) {
   A && A.stopMusic(2.5); await G.fade(true, 2.2);
   A && A.ambience({ wind: 0, birds: 0, fire: 0 });
   await G.wait(1);
-  G.mode = 'end'; document.body.classList.remove('cutscene'); G.hideLine && G.hideLine();
+  G.mode = 'end'; G.hideLine && G.hideLine();
 }
 
 root.Opening = { build, run, DRONE };

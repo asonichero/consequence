@@ -9,7 +9,7 @@
 const THREE = root.THREE, B = root.Blocky, Lap = root.Lap, A = root.GameAudio, V3 = THREE.Vector3;
 const v = (x, y, z) => new V3(x, y, z), clamp = (x, a, b) => Math.max(a, Math.min(b, x)), lerp = (a, b, t) => a + (b - a) * t;
 const turn = (from, to, t) => { const d = ((to - from + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return from + d * t; };
-const SC = 0.95, STAGE_Y = 5.7, JS = 0.5, OUT = 'Day', RED = { red: true };
+const SC = B.SCALE.adult, STAGE_Y = B.SCALE.stageY, JS = 0.5, OUT = 'Day', RED = { red: true };
 
 async function run(G, W, opts) {
   opts = opts || {};
@@ -45,8 +45,6 @@ async function run(G, W, opts) {
   root.addEventListener('keydown', kd); root.addEventListener('keyup', ku);
   const drags = new Map(), pd = e => drags.set(e.pointerId, { x: e.clientX, y: e.clientY }), pm = e => { const d = drags.get(e.pointerId); if (!d) return; st.yaw -= (e.clientX - d.x) * 0.006; st.pitch = clamp(st.pitch + (e.clientY - d.y) * 0.005, 0.15, 1.2); d.x = e.clientX; d.y = e.clientY; }, pu = e => drags.delete(e.pointerId);
   el.addEventListener('pointerdown', pd); el.addEventListener('pointermove', pm); el.addEventListener('pointerup', pu); el.addEventListener('pointercancel', pu);
-  const hint = document.createElement('div'); hint.id = 'dHint'; hint.style.cssText = 'position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:30;padding:6px 14px;background:rgba(10,12,20,.72);color:#e8e2d0;font:italic 15px Georgia,serif;border-radius:4px;display:none;pointer-events:none';
-  document.body.appendChild(hint);
   const tick = dt => {
     if (!st.free) return;
     const f = v(-Math.sin(st.yaw), 0, -Math.cos(st.yaw)), r = v(Math.cos(st.yaw), 0, -Math.sin(st.yaw));
@@ -65,7 +63,7 @@ async function run(G, W, opts) {
     if (st.goal && near < st.goalR && st.onGoal) { const f2 = st.onGoal; st.onGoal = null; f2(); }
   };
   G.updaters.push(tick);
-  const endInput = () => { ui.destroy(); hint.remove(); root.removeEventListener('keydown', kd); root.removeEventListener('keyup', ku); el.removeEventListener('pointerdown', pd); el.removeEventListener('pointermove', pm); el.removeEventListener('pointerup', pu); el.removeEventListener('pointercancel', pu); };
+  const endInput = () => { ui.destroy(); G.hud.reset(); root.removeEventListener('keydown', kd); root.removeEventListener('keyup', ku); el.removeEventListener('pointerdown', pd); el.removeEventListener('pointermove', pm); el.removeEventListener('pointerup', pu); el.removeEventListener('pointercancel', pu); };
   G.dream = { st, M1, slip };       // (for tools and tests)
   // The cameras are fixed: low behind Jack with Mother in view as he walks (it does not follow him); over the shoulder for the talk.
   const yawFor = c => Math.atan2(-(c.look.x - c.pos.x), -(c.look.z - c.pos.z));
@@ -85,13 +83,13 @@ async function run(G, W, opts) {
   // Walking to a place: his, until he is within r of it (in scene notes it is done for him, by way of the points).
   const goTo = (p, r, text, cam, via) => new Promise(async res => {
     cutOnce(cam === camA ? 'A' : 'D', cam); st.yaw = yawFor(cam);
-    const done = () => { st.free = false; hint.style.display = 'none'; ui.show(false); for (const k in keys) keys[k] = false; stick.x = stick.y = 0; ja.speed = 0; G.mode = 'cutscene'; document.body.classList.add('cutscene'); res(); };
+    const done = () => { st.free = false; G.hud.objective(''); G.cue.set('goal', null); ui.show(false); for (const k in keys) keys[k] = false; stick.x = stick.y = 0; ja.speed = 0; G.mode = 'cutscene'; res(); };
     if (NOTES) { G.note && G.note(text);
       for (const q of (via || []).concat([[p.x, p.z]])) { const last = q[0] === p.x && q[1] === p.z; while (Math.hypot(q[0] - st.pos.x, q[1] - st.pos.z) > (last ? r : 2)) { const ang = Math.atan2(q[0] - st.pos.x, q[1] - st.pos.z); st.heading = ang; st.pos.x += Math.sin(ang) * 0.6; st.pos.z += Math.cos(ang) * 0.6; ja.speed = 15; ja.phase += 0.3; jackIn.root.position.set(st.pos.x, 0, st.pos.z); jackIn.root.rotation.y = st.heading; await G.wait(0.04); } }
       done(); return;
     }
-    G.skipping = false; G.mode = 'play'; document.body.classList.remove('cutscene'); G.hideLine && G.hideLine(); ui.show(true);
-    G.note && G.note(text);     hint.textContent = text; hint.style.display = 'block'; st.free = true; st.goal = p; st.goalR = r; st.onGoal = done;
+    G.skipping = false; G.setMode('explore', { fixedCam: true }); G.hideLine && G.hideLine(); ui.show(true);
+    G.note && G.note(text);     G.hud.objective(text); G.cue.set('goal', { x: p.x, z: p.z, r: 14 }); st.free = true; st.goal = p; st.goalR = r; st.onGoal = done;
   });
   const faceEach = async () => {
     const a = mother.root.position, b = jackIn.root.position, tm = Math.atan2(b.x - a.x, b.z - a.z), tj = tm + Math.PI;
@@ -102,7 +100,7 @@ async function run(G, W, opts) {
   const pickOf = async (who, opts2) => { otsMother(); const i = opts.picks ? Math.min(opts.picks[pickN++] || 0, opts2.length - 1) : await G.choose(who, opts2.map(o => o[0])); pts.score += opts2[i][1]; return i; };
 
   // ── 1. The threshold. ──
-  G.mode = 'cutscene'; document.body.classList.add('cutscene'); const f = document.getElementById('fade'); f.style.transition = 'none'; f.style.opacity = 1; void f.offsetWidth; f.style.transition = '';
+  G.mode = 'cutscene'; const f = document.getElementById('fade'); f.style.transition = 'none'; f.style.opacity = 1; void f.offsetWidth; f.style.transition = '';
   cutOnce('A', camA); await G.wait(0.2); G.fade(false, 2.2); await G.wait(0.6);
   await goTo(M1, 28, 'Go to Mother.', camA, [[28, 45], [28, 0]]);
   // ── 2. What did you bring me? ──
@@ -143,7 +141,7 @@ async function run(G, W, opts) {
   G.lap = lap;
   const placeStage = at => { lap.stage.position.set(at.x, STAGE_Y, at.z); lap.stage.rotation.y = at.ry; lap.stage.updateMatrixWorld(true); };
   const cworld = { scene, update(dt, t) { int.update(dt, t); ja.t += dt; ma.t += dt; B.step(jackIn, dt); B.step(mother, dt); if (lap.stage.visible) lap.update(dt); } };
-  G.setScene(cworld); G.mode = 'correction'; document.body.classList.remove('cutscene'); A && A.ambience({ wind: 0.1, birds: 0, fire: 0.8 });
+  G.setScene(cworld); G.mode = 'correction'; A && A.ambience({ wind: 0.1, birds: 0, fire: 0.8 });
   const C = root.Correction, cam = C.freeCam(G, { x0: -75, x1: 75, z0: -75, z1: 75, h: 62 }), panel = C.ui(), camBtn = document.getElementById('corrCam'), redBtn = document.getElementById('corrRed');
   let red = false, shown = null;
   redBtn.onclick = () => { red = true; lap.red(); G.captionOff(); };

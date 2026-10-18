@@ -7,7 +7,7 @@
 const THREE = root.THREE, B = root.Blocky, C = root.Cast, F = root.Farm, A = root.GameAudio, V3 = THREE.Vector3;
 const v = (x, y, z) => new V3(x, y, z), clamp = (x, a, b) => Math.max(a, Math.min(b, x)), lerp = (a, b, t) => a + (b - a) * t;
 const turn = (from, to, t) => { const d = ((to - from + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return from + d * t; };
-const SC = 0.95, STAGE_Y = 5.7;
+const SC = B.SCALE.adult, STAGE_Y = B.SCALE.stageY;
 
 // How brash Jack was at the cart, from his three choices: 0 (the most humble) to 6.
 function brashness(choices) {
@@ -106,7 +106,7 @@ async function run(G, choices, opts) {
   const pick = (a, b, c) => [a, b, c][tier];
   // The indoor staging is laid out from the chair: cl(a, y, b) is a point a units ahead of it (the way it faces) and b to its right, so it follows the chair wherever the room editor puts it.
   const cl = (a, y, b) => v(SEAT.x + a * Math.sin(SEAT.ry) + (b || 0) * Math.cos(SEAT.ry), y, SEAT.z + a * Math.cos(SEAT.ry) - (b || 0) * Math.sin(SEAT.ry));
-  G.mode = 'cutscene'; document.body.classList.add('cutscene'); G.drone = null;
+  G.mode = 'cutscene'; G.drone = null;
   const walk = async (rig, a, pts, speed, face) => {                    // walk a rig through points, its feet going
     for (const q of pts) {
       let d = Math.hypot(q.x - rig.root.position.x, q.z - rig.root.position.z);
@@ -182,7 +182,7 @@ async function run(G, choices, opts) {
   G.cut(sh.mother, () => telling());
   await who('mother', 'What is in your hand, Jack?');
   G.cut(sh.jack, () => telling({ fist: 0, hold: 0.8 }));
-  await who('jack', pick('Beans. The woman said they grow whatever we need, whether we know it or not. I believed her.', 'Beans, Mother. Magic ones. The woman at the cart said they grow whatever we need.', 'Beans, Mother. Five of them, and every one enchanted. Gold, silver, ember red, moss green, and one the deep blue of a night sky.'));
+  await who('jack', pick('Beans. The woman said they root deeper than any coin could. I believed her.', 'Beans, Mother. Magic ones. The woman at the cart said they root deeper than any coin.', 'Beans, Mother. Five of them, and every one enchanted. Gold, silver, ember red, moss green, and one the deep blue of a night sky.'));
   G.cut(sh.mother, () => telling({ fist: 0 }));
   await who('mother', 'Beans.');
   ma.gesture = 1; ma.wag = 0.6; ma.fold = 0;
@@ -190,7 +190,7 @@ async function run(G, choices, opts) {
   G.cut(sh.jack, () => telling({ fist: 0, gesture: 0, wag: 0, fold: 0, side: 1 }));
   await who('jack', pick('I know. I’m sorry. I didn’t think. She spoke so well, and I wanted so badly to bring you something.', 'It was a fair trade, Mother. She said so herself.', 'It was a fair exchange. You’ll see. By spring we’ll have more than a cow’s worth, and you’ll be the first to say so.'));
   G.cut(sh.mother, () => telling({ fist: 0, gesture: 1, wag: 1, fold: 0 }));
-  await who('mother', 'A fair trade. This is the third time this week you have come home with foolishness in place of sense, and the last of our cow besides. I told you this morning. Not for stories. Not for tricks.');
+  await who('mother', 'A fair trade. This is the fourth time this week you have come home with foolishness in place of sense, and the last of our cow besides. I told you this morning. Not for stories. Not for tricks.');
   G.cut(sh.jack, () => telling({ fist: 0, gesture: 0, wag: 0, fold: 0, side: 1 }));
   await who('jack', pick('Mother, please. I can fix this. I’ll find her, I’ll—', 'I did what I thought was best.', 'You never believe me! One day you’ll see I was right.'));
   G.cut(sh.mother, () => telling({ fist: 0, gesture: 0, wag: 0, fold: 0, side: 1 }));
@@ -212,7 +212,7 @@ async function run(G, choices, opts) {
   // The scene ends here, as he steps up to her knee: the correction follows (js/correction.js), in this same room.
   await G.wait(0.8);
   G.hideLine && G.hideLine();
-  G.mode = 'end'; document.body.classList.remove('cutscene');
+  G.mode = 'end';
   return { tier, brash: brashness(choices), hits: 0, world: W };
 }
 

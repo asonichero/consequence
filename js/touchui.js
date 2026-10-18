@@ -1,11 +1,12 @@
-// Climbing Toward Consequence — the touch controls, one set for every walking scene.
-//   Left thumb: the stick, with Sneak (a latching toggle) just above it.  Right thumb: Jump / Climb (big, lowest), Action / Pick up beside it, Run (held while pressed) above it, and Drop between them.
-//   Every button is always on screen, greyed out when the scene has no use for it or it would do nothing.  Top right, under the Menu button: the camera button (the same round camera as the correction scenes), which steps through the zooms and first person.
-//   Every button has an icon; Jump and Action also carry a small label for what a tap will do now. A button that would do nothing is greyed out and ignores taps.
+// Climbing Toward Consequence — the touch controls: one set, for every scene that has the player's hands in it, on every device (a mouse works them as a finger does; the keyboard still answers, but nothing says so).
+//   Left thumb: the stick, with Sneak (a latching toggle) just above it.  Right thumb: Jump / Climb (big, lowest), Action beside it, Run (held while pressed) above, and Drop (Put down, or a beat's second answer) between them.
+//   Top right, under the Menu button: the camera button, which steps through the zooms and first person.
+//   Every button has an icon; Jump and Action also carry a small label for what a tap will do now. A scene gets the buttons it asks for (the others are not drawn), and a button that would do nothing just now is greyed and ignores taps.
+//   By mode (the page's body[data-mode], set by G.setMode): explore shows them all; a beat is answered by the Context button alone (Action, in Jump's place, with Drop beside it when there is a second answer);
+//   a cutscene shows none.
 // Use:  const ui = TouchUI.create({ run: true, sneak: true, jump: true, act: true, drop: true, cam: true });
 //       ui.stick ({x, y}, -1..1); ui.run / ui.sneak (booleans); ui.on = { jump, jumpUp, act, drop, cam, run, sneak };
 //       ui.set('jump', { label: 'Climb', icon: 'climb', enabled: true });  ui.set('cam', { icon: 'eye', title: '…' });  ui.show(false);  ui.destroy().
-// Buttons other than the camera appear on touch screens only (pointer: coarse); `?touch` in the address forces them for testing.
 (function (root) {
 'use strict';
 const ICONS = {
@@ -22,63 +23,53 @@ const ICONS = {
   grip: '<path d="M7 11V8a1.500 1.500 0 0 1 3 0v-1.500a1.500 1.500 0 0 1 3 0V8a1.500 1.500 0 0 1 3 0v6c0 4-2.500 6-5.500 6S6 17.500 6 14.500V12"/>',
 };
 const CSS = `
-  @media (pointer: coarse) { #cwPrompt, #cHint, #gHint, #clHint, .mhint { display: none !important; } } body.touchmode #cwPrompt, body.touchmode #cHint, body.touchmode #gHint, body.touchmode #clHint, body.touchmode .mhint { display: none !important; }       /* (no key prompts on a touch screen) */
-  #tui { position: fixed; inset: 0; pointer-events: none; z-index: 12; display: none; -webkit-touch-callout: none; }
+  #cwPrompt, #cHint, #gHint, #clHint, .mhint { display: none !important; }       /* (the old key prompts: the Context button says what a tap will do, so none is drawn) */
+  #tui { position: fixed; inset: 0; pointer-events: none; z-index: 12; display: none; -webkit-touch-callout: none; --tsl: var(--sl, 0px); --tsr: var(--sr, 0px); --tst: var(--st, 0px); --tsb: var(--sb, 0px); }
   #tui .tb { position: absolute; pointer-events: auto; margin: 0; padding: 0; border-radius: 50%; border: 2.5px solid rgba(255,255,255,0.85); background: rgba(20,22,30,0.72); color: #fff; display: none; flex-direction: column; align-items: center; justify-content: center; touch-action: none; -webkit-tap-highlight-color: transparent; font: 600 10.5px/1 Georgia, serif; letter-spacing: .02em; }
   #tui .tb svg { fill: none; stroke: #fff; stroke-width: 2.1; stroke-linejoin: round; stroke-linecap: round; }
-  #tui .tb span { margin-top: 2px; max-width: 92%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px #000; }
+  #tui .tb span { margin-top: 2px; max-width: 94%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px #000; }
+  #tui .tb span.l7 { font-size: 9.5px; }
+  #tui .tb span.l2 { white-space: normal; text-align: center; font-size: 9px; line-height: 1.05; letter-spacing: 0; margin-top: 1px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-width: 90%; }       /* (a longer verb takes two lines, in the same button) */
+  #tui .tb.long svg { width: 20px !important; height: 20px !important; }
   #tui .tb.on { background: #6b5a2a; border-color: #f0d98a; } #tui .tb.down { background: rgba(80,86,110,0.95); transform: scale(0.94); }
   #tui .tb.off { opacity: 0.32; filter: grayscale(1); }
-  #tJump { right: 22px; bottom: 24px; width: 78px; height: 78px; } #tJump svg { width: 34px; height: 34px; }
-  #tAct { right: 112px; bottom: 34px; width: 66px; height: 66px; } #tAct svg { width: 28px; height: 28px; }
-  #tDrop { right: 106px; bottom: 104px; width: 58px; height: 58px; } #tDrop svg { width: 22px; height: 22px; }
-  #tRun { right: 37px; bottom: 112px; width: 54px; height: 54px; } #tSneak { left: 52px; bottom: 170px; width: 54px; height: 54px; } #tRun svg, #tSneak svg { width: 25px; height: 25px; }
-  #tCam { right: 12px; top: 72px; width: 56px; height: 56px; z-index: 36; } #tCam svg { width: 30px; height: 30px; }
-  #tStick { position: absolute; left: 22px; bottom: 26px; width: 130px; height: 130px; border-radius: 50%; background: rgba(20,22,28,0.45); border: 2px solid rgba(230,196,106,0.55); touch-action: none; display: none; pointer-events: auto; }
+  #tui .tb.ring::after { content: ''; position: absolute; inset: -7px; border-radius: 50%; pointer-events: none; background: conic-gradient(#f0d98a calc(var(--ring, 0) * 360deg), rgba(255,255,255,0.16) 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px)); }       /* (a ring that fills while the answer is not yet ready) */
+  #tui .tb.ready { background: #6b5a2a; border-color: #f0d98a; }       /* (gold: there is something here to do) */
+  #tui .tb.ask { animation: tbAsk 1.1s ease-in-out infinite; } @keyframes tbAsk { 0%, 100% { box-shadow: 0 0 0 0 rgba(240,217,138,0.55); } 50% { box-shadow: 0 0 0 9px rgba(240,217,138,0); } }       /* (and breathing: the scene is waiting for it) */
+  #tui .tb.vis { display: flex; } #tui.hasStick #tStick { display: block; }
+  #tJump { right: calc(var(--tsr) + 22px); bottom: calc(var(--tsb) + 24px); width: 78px; height: 78px; } #tJump svg { width: 34px; height: 34px; }
+  #tAct { right: calc(var(--tsr) + 112px); bottom: calc(var(--tsb) + 34px); width: 66px; height: 66px; } #tAct svg { width: 28px; height: 28px; }
+  #tDrop { right: calc(var(--tsr) + 106px); bottom: calc(var(--tsb) + 104px); width: 58px; height: 58px; } #tDrop svg { width: 22px; height: 22px; }
+  #tRun { right: calc(var(--tsr) + 37px); bottom: calc(var(--tsb) + 112px); width: 54px; height: 54px; } #tSneak { left: calc(var(--tsl) + 52px); bottom: calc(var(--tsb) + 170px); width: 54px; height: 54px; } #tRun svg, #tSneak svg { width: 25px; height: 25px; }
+  #tCam { right: calc(var(--tsr) + 12px); top: calc(var(--tst) + 72px); width: 56px; height: 56px; z-index: 36; } #tCam svg { width: 30px; height: 30px; }
+  #tStick { position: absolute; left: calc(var(--tsl) + 22px); bottom: calc(var(--tsb) + 26px); width: 130px; height: 130px; border-radius: 50%; background: rgba(20,22,28,0.45); border: 2px solid rgba(230,196,106,0.55); touch-action: none; display: none; pointer-events: auto; }
   #tKnob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgba(230,196,106,0.75); pointer-events: none; }
-  @media (pointer: coarse) { #tui.hasStick #tStick { display: block; } #tui .tb.touch.vis { display: flex; } }
-  #tui.mouse:not(.force) #tStick, #tui.mouse:not(.force) .tb.touch { display: none !important; }
-  #tui.force.hasStick #tStick { display: block; } #tui.force .tb.touch.vis { display: flex; }
-  #tui .tb.vis:not(.touch):not(.desk) { display: flex; }
-  #tHelp { right: 12px; bottom: 12px; width: 48px; height: 48px; z-index: 36; } #tHelp svg { width: 26px; height: 26px; } @media (pointer: fine) { #tui:not(.force) #tHelp { display: flex; } }
-  #tSheet { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; background: rgba(6,8,12,0.62); pointer-events: auto; font: 15px/1.5 Georgia, serif; color: #ece8df; }
-  #tSheet.open { display: flex; } #tSheet .card { background: rgba(20,22,30,0.96); border: 2.5px solid rgba(255,255,255,0.85); border-radius: 14px; padding: 18px 26px 16px; min-width: 340px; max-width: 92vw; }
-  #tSheet h3 { margin: 0 0 8px; font-size: 18px; font-weight: 600; } #tSheet table { border-collapse: collapse; width: 100%; } #tSheet td { padding: 4px 0; vertical-align: top; } #tSheet td:first-child { padding-right: 22px; white-space: nowrap; }
-  #tSheet kbd { font: 600 13px Georgia, serif; background: #2c303d; border: 1px solid #5a5f72; border-bottom-width: 2px; border-radius: 5px; padding: 1px 7px; margin-right: 3px; } #tSheet .x { margin-top: 10px; font-size: 12.5px; opacity: .65; text-align: right; }
-  @media (max-height: 420px) { #tJump { width: 68px; height: 68px; right: 18px; bottom: 18px; } #tAct { right: 98px; bottom: 26px; width: 58px; height: 58px; } #tDrop { right: 94px; bottom: 92px; width: 54px; height: 54px; } #tStick { width: 112px; height: 112px; left: 16px; bottom: 18px; } #tRun { right: 28px; bottom: 98px; width: 48px; height: 48px; } #tSneak { left: 44px; bottom: 140px; width: 48px; height: 48px; } #tCam { top: 66px; width: 48px; height: 48px; } }`;
+  /* a beat: the Context button answers what is asked, in the thumb's own place, and a second answer sits beside it; nothing else is drawn */
+  body[data-mode="beat"] #tui #tStick, body[data-mode="beat"] #tui #tJump, body[data-mode="beat"] #tui #tRun, body[data-mode="beat"] #tui #tSneak, body[data-mode="beat"] #tui #tDrop.off { display: none !important; }
+  body[data-mode="beat"] #tui #tAct { right: calc(var(--tsr) + 22px); bottom: calc(var(--tsb) + 24px); width: 78px; height: 78px; } body[data-mode="beat"] #tui #tAct svg { width: 34px; height: 34px; }
+  body[data-mode="beat"] #tui #tDrop { right: calc(var(--tsr) + 112px); bottom: calc(var(--tsb) + 34px); width: 66px; height: 66px; } body[data-mode="beat"] #tui #tDrop svg { width: 28px; height: 28px; }
+  body.fixedcam #tui #tCam { display: none !important; }       /* (the scene holds the camera: there is nothing for the button to turn) */
+  @media (max-height: 420px) { #tJump, body[data-mode="beat"] #tui #tAct { width: 68px; height: 68px; right: calc(var(--tsr) + 18px); bottom: calc(var(--tsb) + 18px); } #tAct, body[data-mode="beat"] #tui #tDrop { right: calc(var(--tsr) + 98px); bottom: calc(var(--tsb) + 26px); width: 58px; height: 58px; } #tDrop { right: calc(var(--tsr) + 94px); bottom: calc(var(--tsb) + 92px); width: 54px; height: 54px; } #tStick { width: 112px; height: 112px; left: calc(var(--tsl) + 16px); bottom: calc(var(--tsb) + 18px); } #tRun { right: calc(var(--tsr) + 28px); bottom: calc(var(--tsb) + 98px); width: 48px; height: 48px; } #tSneak { left: calc(var(--tsl) + 44px); bottom: calc(var(--tsb) + 140px); width: 48px; height: 48px; } #tCam { top: calc(var(--tst) + 66px); width: 48px; height: 48px; } }`;
 let UI = null;
-// ── Tips and prompts: shown on desktop only (the touch buttons say what they do). `Tips.once(key, show)` runs `show` the first time a control is needed, once ever; `Tips.clean(text)` drops key names from a line on touch screens. ──
-let usedMouse = false;       // (a device with both: once a mouse or a key is used, it is a desktop, and the touch controls go until a finger is used again)
-const coarse = () => /[?&]touch\b/.test(root.location ? root.location.search : '') || (!usedMouse && !!(root.matchMedia && root.matchMedia('(pointer: coarse)').matches));
-const TIPKEY = 'castle-consequence:tips:v1'; let seen = null;
-const load = () => { if (seen) return seen; try { seen = JSON.parse(root.localStorage.getItem(TIPKEY) || '{}') || {}; } catch (e) { seen = {}; } return seen; };
-const Tips = { mobile: coarse,
-  clean: s => coarse() && typeof s === 'string' ? s.replace(/\s*\((?:E|Q|C|V|Space|Shift)(?:\s*(?:or|\/)\s*(?:E|Q|C|V|Space))*(?: at the tree)?\)/g, '') : s,
-  once(key, show) { if (coarse()) return false; const m = load(); if (m[key]) return false; m[key] = 1; try { root.localStorage.setItem(TIPKEY, JSON.stringify(m)); } catch (e) {} show(); return true; } };
+// Tips: the old keyboard hints, kept as no-ops while the scenes stop calling them. `clean` still takes a key name out of a line, so that none can reach the screen.
+const Tips = { mobile: () => true, once: () => false,
+  clean: s => typeof s !== 'string' ? s : s.replace(/\s*\((?:E|Q|C|V|Space|Shift)(?:\s*(?:or|\/)\s*(?:E|Q|C|V|Space))*(?: at the tree)?\)/g, '').replace(/\b(?:press|hold) (?:E|Q|C|V|Space|Shift)\b,? ?(?:to |and )?/gi, '') };
 const svg = name => '<svg viewBox="0 0 24 24">' + (ICONS[name] || '') + '</svg>';
 function build() {
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
   const el = document.createElement('div'); el.id = 'tui';
-  if (/[?&]touch\b/.test(root.location ? root.location.search : '')) { el.classList.add('force'); document.body.classList.add('touchmode'); }
   el.innerHTML = '<div id="tStick"><div id="tKnob"></div></div>' +
-    '<button id="tHelp" class="tb desk vis" title="Controls" aria-label="Controls"></button>' +
-    '<button id="tJump" class="tb touch"></button><button id="tAct" class="tb touch"></button><button id="tDrop" class="tb touch"></button><button id="tRun" class="tb touch"></button><button id="tSneak" class="tb touch"></button><button id="tCam" class="tb"></button>';
+    '<button id="tJump" class="tb"></button><button id="tAct" class="tb"></button><button id="tDrop" class="tb"></button><button id="tRun" class="tb"></button><button id="tSneak" class="tb"></button><button id="tCam" class="tb"></button>';
   document.body.appendChild(el);
-  const mode = m => { usedMouse = m; el.classList.toggle('mouse', m); document.body.classList.toggle('mousemode', m); };
-  root.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') mode(true); else if (e.pointerType === 'touch') mode(false); }, true);
-  root.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !usedMouse) mode(true); }, true);
-  root.addEventListener('keydown', e => { if (/^(w|a|s|d|e|q|c|x|W|A|S|D|E|Q|C|X| |Arrow.*|Shift)$/.test(e.key) && !usedMouse) mode(true); }, true);
-  const sheet = document.createElement('div'); sheet.id = 'tSheet';
-  sheet.innerHTML = '<div class="card"><h3>Controls</h3><table>' + [['<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows', 'Move'], ['<kbd>Shift</kbd> (hold)', 'Run'], ['<kbd>C</kbd> or <kbd>X</kbd>', 'Sneak (slow and quiet)'], ['<kbd>Space</kbd>', 'Jump; at wood or a ledge, climb (hold to keep going)'], ['<kbd>E</kbd>', 'Action: use, open, talk, speak softly'], ['<kbd>Q</kbd>', 'Pick up, or put down, what you carry'], ['Wheel, or the camera button', 'Camera zoom'], ['Drag', 'Look around']].map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('') + '</table><div class="x">Click anywhere or press Esc to close</div></div>';
-  document.body.appendChild(sheet);
-  const toggleSheet = on => sheet.classList.toggle('open', on === undefined ? !sheet.classList.contains('open') : on);
-  sheet.addEventListener('pointerdown', () => toggleSheet(false)); root.addEventListener('keydown', e => { if (e.key === 'Escape' && sheet.classList.contains('open')) { toggleSheet(false); e.stopPropagation(); } }, true);
   const $ = id => document.getElementById(id), B = { jump: $('tJump'), act: $('tAct'), drop: $('tDrop'), run: $('tRun'), sneak: $('tSneak'), cam: $('tCam') };
-  document.getElementById('tHelp').innerHTML = svg('keys'); document.getElementById('tHelp').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); toggleSheet(); });
   const ui = { el, stick: { x: 0, y: 0 }, run: false, sneak: false, on: {}, keys: null, B, state: {} };
   const DEF = { jump: ['jump', 'Jump'], act: ['act', 'Do'], drop: ['drop', 'Drop'], run: ['run', 'Run'], sneak: ['sneak', 'Sneak'], cam: ['camera', ''] };
-  const draw = k => { const s = ui.state[k], b = B[k]; if (!s) return; b.innerHTML = svg(k === 'act' && s.label === 'Look' ? 'eye' : s.icon) + (s.label && (k === 'jump' || k === 'act' || k === 'drop' || k === 'run' || k === 'sneak') ? '<span>' + s.label + '</span>' : ''); b.title = s.title || s.label || ''; b.classList.toggle('off', !s.enabled); b.classList.toggle('on', !!s.on); b.setAttribute('aria-disabled', s.enabled ? 'false' : 'true'); };
-  ui.set = (k, o) => { const s = ui.state[k]; if (!s) return; let ch = false; for (const p in o) if (s[p] !== o[p]) { s[p] = o[p]; ch = true; } if (ch) draw(k); };
+  const drawFace = k => { const s = ui.state[k], b = B[k]; const lab = s.label && (k === 'jump' || k === 'act' || k === 'drop' || k === 'run' || k === 'sneak') ? s.label : '';
+    b.classList.toggle('long', lab.length > 8); b.innerHTML = svg(k === 'act' && s.label === 'Look' ? 'eye' : s.icon) + (lab ? '<span class="' + (lab.length > 8 ? 'l2' : lab.length > 6 ? 'l7' : '') + '">' + lab + '</span>' : ''); b.title = s.title || s.label || ''; };
+  const drawState = k => { const s = ui.state[k], b = B[k], rg = s.ring == null ? null : Math.max(0, Math.min(1, s.ring)); b.classList.toggle('off', !s.enabled); b.classList.toggle('on', !!s.on); b.classList.toggle('ready', (s.ready == null ? k === 'act' || k === 'drop' : !!s.ready) && s.enabled);       // (the Context button and its Alt are gold whenever there is something here for them to do)
+     b.classList.toggle('ask', !!s.ask && s.enabled); b.classList.toggle('ring', rg !== null); if (rg !== null) b.style.setProperty('--ring', rg.toFixed(3)); b.setAttribute('aria-disabled', s.enabled ? 'false' : 'true'); };
+  const draw = k => { if (ui.state[k]) { drawFace(k); drawState(k); } };
+  ui.set = (k, o) => { const s = ui.state[k]; if (!s) return; let face = false, st_ = false; for (const p in o) if (s[p] !== o[p]) { s[p] = o[p]; if (p === 'icon' || p === 'label' || p === 'title') face = true; else st_ = true; } if (face) drawFace(k); if (face || st_) drawState(k); };
   ui.setRun = on => { ui.run = on; if (ui.keys) ui.keys.run = on; ui.set('run', { on }); };
   ui.setSneak = on => { ui.sneak = on; ui.set('sneak', { on }); };
   ui.show = on => { el.style.display = on ? 'block' : 'none'; };
@@ -99,9 +90,9 @@ function build() {
     sEl.addEventListener('pointerdown', e => { if (id !== null) return; id = e.pointerId; sEl.setPointerCapture(id); set(e); e.preventDefault(); e.stopPropagation(); });
     sEl.addEventListener('pointermove', e => { if (e.pointerId === id) set(e); });
     const end = e => { if (e.pointerId === id) { id = null; ui.stick.x = ui.stick.y = 0; knob.style.transform = ''; } }; sEl.addEventListener('pointerup', end); sEl.addEventListener('pointercancel', end); }
-  ui.reset = o => {
+  ui.reset = o => {                                                                                   // (a scene asks for the buttons it uses: those are drawn; the stick unless `stick: false`)
     o = o || {}; ui.destroy(); ui.keys = o.keys || null; ui.run = ui.sneak = false;
-    for (const k in DEF) { const want = true; ui.state[k] = { icon: DEF[k][0], label: DEF[k][1], enabled: k === 'cam' ? o.cam !== false : !!o[k], on: false, title: '' }; if (o[k] && typeof o[k] === 'object') Object.assign(ui.state[k], o[k]); draw(k); B[k].classList.toggle('vis', want); }
+    for (const k in DEF) { const want = !!o[k]; ui.state[k] = { icon: DEF[k][0], label: DEF[k][1], enabled: want, on: false, ready: null, ask: false, ring: null, title: '' }; if (o[k] && typeof o[k] === 'object') Object.assign(ui.state[k], o[k]); draw(k); B[k].classList.toggle('vis', want); }
     el.classList.toggle('hasStick', o.stick !== false); el.style.display = 'block'; return ui; };
   return ui;
 }

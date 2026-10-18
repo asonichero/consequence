@@ -10,7 +10,7 @@
 'use strict';
 const THREE = root.THREE, F = root.Farm, A = root.GameAudio, V3 = THREE.Vector3;
 const v = (x, y, z) => new V3(x, y, z), clamp = (x, a, b) => Math.max(a, Math.min(b, x)), lerp = (a, b, t) => a + (b - a) * t;
-const SC = 0.95, TOP = 790, CLOUD_Y = 800, MIN_S = 0.25;
+const SC = root.Blocky.SCALE.adult, TOP = 790, CLOUD_Y = 800, MIN_S = 0.25;
 const PLOT = F.PLOT, CX = PLOT.cx, CZ = PLOT.cz, HALF = PLOT.cell * PLOT.n / 2, { MERGE, N: NT } = root.Chapter3.STALK;
 const VINE = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([i, j]) => v(CX + i * PLOT.cell, 0, CZ + j * PLOT.cell));       // the four outer stalks, from their furrows; the fifth, in the middle, goes straight up inside the braid
 const SOLID = [{ x0: -70, x1: 70, z0: -80, z1: 20 }, { x0: -66, x1: -54, z0: 24, z1: 36 }, { x0: -153, x1: -147, z0: 17, z1: 23 }, { x0: -99, x1: -93, z0: -73, z1: -67 }];      // (the cottage, the barrel, the scarecrow, the tree, as in the garden)
@@ -40,7 +40,7 @@ function run(G, W) {
   return new Promise(resolve => {
     const { ext, jackOut, world } = W, E = ext.scene, el = G.renderer.domElement, box = F.box, plain = F.plain;
     const C3 = root.Chapter3; C3 && C3.ensureDawn && C3.ensureDawn(E);
-    G.setScene(world); G.drone = null; G.mode = 'play'; document.body.classList.remove('cutscene'); G.hideLine && G.hideLine();
+    G.setScene(world); G.drone = null; G.mode = 'explore'; G.hideLine && G.hideLine();
     A && A.ambience({ wind: 0.35, birds: 0.5, fire: 0 });
     A && A.ctx && (A.startMusic({ theme: 'climb' }), A.duckMusic(0.8, 3));
     G.save({ step: 'climb' });
@@ -116,9 +116,10 @@ function run(G, W) {
     const camera = G.camera, nearOld = camera.near;
 
     // ── Jack on the stalk. ──
-    const st = { gustN: 0, cur: grounds[1], fr: 1, y: 0, a: 0, r: 7, pos: v(CX, 0, CZ + HALF + 14), heading: Math.PI, walkN: 0, walkPh: 0, mode: 'walk', mt: 0, from: null, to: null, xf: false, fromW: null, stamina: 100, grip: false, gripPrev: false, hold: 0, cool: 0, gust: { t: 14, phase: 'wait' }, slip: 0, toastAt: 0, capAt: 0, pitch: 0.5, zoom: 1, wy: 0, wvy: 0, camA: Math.PI / 2, shake: 0, zone: 'lower', best: 0, ended: false, tut: 0, lock: 0 };
+    const st = { gustN: 0, cur: grounds[1], fr: 1, y: 0, a: 0, r: 7, pos: v(CX, 0, CZ + HALF + 14), heading: Math.PI, walkN: 0, walkPh: 0, mode: 'walk', mt: 0, from: null, to: null, xf: false, fromW: null, stamina: 100, grip: false, gripPrev: false, hold: 0, cool: 0, gust: { t: 14, phase: 'wait' }, slip: 0, capAt: 0, pitch: 0.5, zoom: 1, wy: 0, wvy: 0, camA: Math.PI / 2, shake: 0, zone: 'lower', best: 0, ended: false, tut: 0, lock: 0 };
     jackOut.root.visible = true; jackOut.root.rotation.set(0, 0, 0); jackOut.root.position.copy(st.pos); W.paintJack(jackOut, { expr: 1 });
     const pose = { up: 0, reach: 0, stand: 1, fall: 0 };
+    const wasAfter = jackOut.after;       // (and what he moved by before is put back when the climb is over)
     jackOut.after = r => {
       const t = G.t, tr = 0.04 * Math.sin(t * 22) * Math.max(0, 1 - st.stamina / 30);       // trembling when spent
       const hang = 1 - pose.stand, sw = Math.sin(t * 1.3) * 0.05;
@@ -132,23 +133,16 @@ function run(G, W) {
     };
 
     // ── HUD ──
-    const css = document.createElement('style');
-    css.textContent = `#clHud { position: fixed; inset: 0; pointer-events: none; z-index: 12; font-family: Georgia, serif; color: #ece8df; }
-      #clAlt { position: absolute; top: 12px; left: 14px; background: rgba(10,12,16,0.78); border: 1px solid #4a4d58; border-radius: 8px; padding: 6px 12px; font-size: 14px; }
-      #clObj { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(10,12,16,0.78); border: 1px solid #4a4d58; border-radius: 8px; padding: 8px 16px; font-size: clamp(13px, 1.9vw, 17px); text-align: center; max-width: 60vw; }
-      #clSt { position: absolute; left: 50%; bottom: 3.5vh; transform: translateX(-50%); width: min(340px, 56vw); } #clSt span { font-size: 12px; opacity: .85; letter-spacing: .08em; text-transform: uppercase; }
-      #clBar { height: 12px; background: #1c1f27; border: 1px solid #454a58; border-radius: 5px; overflow: hidden; margin-top: 3px; } #clBar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #c9a84c, #7ab85a); transition: background .2s; } #clBar.low i { background: #c0503a; }
-      #clHint { position: absolute; left: 50%; bottom: 22vh; transform: translateX(-50%); background: rgba(10,12,16,0.85); border: 1px solid #c9a84c; color: #f0d98a; padding: 5px 14px; border-radius: 6px; font-size: 14px; opacity: 0; }
-      #clToast { position: absolute; left: 50%; bottom: 12vh; transform: translateX(-50%); background: rgba(10,12,16,0.85); border: 1px solid #4a4d58; padding: 8px 16px; border-radius: 8px; font-size: 14px; max-width: 80vw; text-align: center; opacity: 0; transition: opacity .4s; }
+    const css = document.createElement('style');       // (the weather over the screen: the vignette that closes in with height, the white edges of a gust; the readings are the shared HUD's)
+    css.textContent = `#clHud { position: fixed; inset: 0; pointer-events: none; z-index: 11; font-family: Georgia, serif; color: #ece8df; }
       #clVig { position: absolute; inset: 0; opacity: 0; } #clGust { position: absolute; inset: 0; opacity: 0; background: linear-gradient(90deg, rgba(255,255,255,.55), transparent 22%, transparent 78%, rgba(255,255,255,.55)); }
       #clGustTxt { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); font-size: 20px; letter-spacing: .3em; color: #fff; text-shadow: 0 0 10px #000; opacity: 0; }`;
     document.head.appendChild(css);
     const hud = document.createElement('div'); hud.id = 'clHud';
-    hud.innerHTML = '<div id="clVig"></div><div id="clGust"></div><div id="clGustTxt">WIND</div><div id="clAlt"></div><div id="clObj">Climb the beanstalk.</div><div id="clSt"><span>Stamina</span><div id="clBar"><i></i></div></div><div id="clToast"></div><div id="clHint"></div>';
+    hud.innerHTML = '<div id="clVig"></div><div id="clGust"></div><div id="clGustTxt">WIND</div>';
     document.body.appendChild(hud);
     const $ = id => document.getElementById(id);
-    const tipToast = (t, ms) => { if (!root.Tips.mobile()) toast(t, ms); };       // (the how-to tips are for the keyboard: the touch buttons say what they do)
-    const toast = (t, ms = 3600) => { $('clToast').textContent = root.Tips.clean(t); $('clToast').style.opacity = 1; st.toastAt = performance.now() + ms; };
+    const toast = (t, ms = 3600) => G.hud.toast(t, ms);
     const mutter = (t, force) => { if (!force && performance.now() < st.capAt) return; st.capAt = performance.now() + 7000; G.caption('jack', t); };
     const keys = {}, ui = root.TouchUI.create({ keys, run: true, jump: { icon: 'grip', label: 'Grip' }, cam: true }), stick = ui.stick, KM = { w: 'up', W: 'up', ArrowUp: 'up', s: 'down', S: 'down', ArrowDown: 'down', a: 'left', A: 'left', ArrowLeft: 'left', d: 'right', D: 'right', ArrowRight: 'right', ' ': 'grip', Shift: 'run' };
     const typing = e => e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
@@ -250,7 +244,6 @@ function run(G, W) {
         // Wandering towards the way out, or the door: he reminds himself why he is here.
         if (Math.hypot(st.pos.x - GATE.x, st.pos.z - GATE.z) < 26) mutter('No... not out there. I came to find what lies at the top of that stalk.');
         else if (Math.hypot(st.pos.x - DOORP.x, st.pos.z - DOORP.z) < 20) mutter('I can’t go back to bed now. I have to know what lies at the top of that stalk.');
-        $('clHint').textContent = nearV ? 'Space: climb this stalk' : ''; $('clHint').style.opacity = nearV ? 1 : 0;
       } else if (st.mode === 'mount') {
         const m = st.mount; m.t += dt / 0.55; const u = clamp(m.t, 0, 1), e = u * u * (3 - 2 * u), gn = grounds[m.k], to = poseWorld(gn, poseAt(gn));
         st.pos.set(lerp(m.from.x, to.x, e), 0, lerp(m.from.z, to.z, e)); st.heading = st.heading + angDiff(Math.atan2(centreOf(m.k, 0).x - st.pos.x, centreOf(m.k, 0).z - st.pos.z), st.heading) * Math.min(1, dt * 12); st.walkN = 0.6;
@@ -270,7 +263,7 @@ function run(G, W) {
         if (st.stamina <= 0) { drop('Your arms give out! You slide, and catch yourself below.'); }
         else { // slick holds: leave them quickly
           if (st.cur.kind === 'slick') { st.slip += dt; if (st.slip > 0.75) { st.slip = 0; st.stamina = Math.max(0, st.stamina - 10); drop('Slick with sap! Your hands slide off.'); } } else st.slip = 0;
-          st.cool -= dt; if (st.lock > 0) { st.lock -= dt; if (st.lock <= 0) tipToast('Rested. Press Space to climb on.', 2600); } const inp = st.lock > 0 ? null : input();
+          st.cool -= dt; if (st.lock > 0) { st.lock -= dt; } const inp = st.lock > 0 ? null : input();
           if (st.cur.kind === 'ledge') { if (edge && st.lock <= 0 && st.cool <= 0) { const h = pick(st.cur, { x: 0, y: 1 }); if (h) startMove(h); } }       // (a leaf is a stop: out on it, away from the stalk, he climbs on only when told: Space)
           else if (inp && st.cool <= 0 && !st.grip && st.mode === 'idle') { const h = pick(st.cur, inp); if (h) startMove(h); else st.cool = 0.12; }
         }
@@ -282,16 +275,16 @@ function run(G, W) {
         if (u >= 1) {
           st.cur = st.to; st.fr = st.to.fr; st.mode = 'idle'; st.cool = 0.14; pose.fall = 0; st.best = Math.max(st.best, st.cur.y); st.xf = false; st.a = st.cur.a; const pp = poseAt(st.cur); st.y = pp.y; st.r = pp.r;
           if (st.cur.kind === 'ground') { const w = poseWorld(st.cur, pp); st.pos.set(w.x, 0, w.z); st.heading = Math.atan2(centreOf(st.fr, 0).x - w.x, centreOf(st.fr, 0).z - w.z) + Math.PI; st.mode = 'walk'; st.stamina = 100; st.zone = 'lower'; }
-          else if (st.cur.kind === 'ledge' && !st.restedOnce) { st.restedOnce = true; st.lock = 4.5; st.stamina = Math.min(st.stamina, 55); st.capAt = 0; mutter('A broad leaf. I can rest here.', true); toast('Where the path crosses a leaf, you rest. Your strength returns while you stand on it; press Space to climb on.', 5600); }
+          else if (st.cur.kind === 'ledge' && !st.restedOnce) { st.restedOnce = true; st.lock = 4.5; st.stamina = Math.min(st.stamina, 55); st.capAt = 0; mutter('A broad leaf. I can rest here.', true); toast('Where the path crosses a leaf, you rest. Your strength returns while you stand on it; tap Climb on when you are ready.', 5600); }
         }
       }
       pose.stand = lerp(pose.stand, st.mode === 'rise' ? 0 : walking || st.mode === 'walk' || st.cur.kind === 'ledge' ? (st.mode === 'move' ? 0.5 : 1) : 0, Math.min(1, dt * 9));
       if (st.mode === 'drop') pose.stand = 0;
       // Teaching.
-      if (st.tut === 0 && t > 1.0) { st.tut = 1; tipToast('Walk up to one of the four outer stalks, then press Space to climb. Any of them will do.', 7000); }
-      else if (st.tut === 1 && st.mode === 'idle' && st.cur.kind !== 'ground') { st.tut = 2; st.tutAt = t; mutter('Hand over hand. Up we go.'); tipToast('Reach for a glowing handhold: W A S D, or the stick.', 6000); }
-      else if (st.tut === 2 && t > st.tutAt + 8) { st.tut = 3; tipToast('Hanging tires you. Hold Space to grip and steady yourself; it costs less strength.', 7000); }
-      else if (st.tut === 3 && st.stamina < 65) { st.tut = 4; tipToast('Watch the stamina bar. Where the path crosses a broad leaf you rest and recover; press Space to climb on when you are ready.', 7000); }
+      if (st.tut === 0 && t > 1.0) { st.tut = 1; toast('Walk up to one of the four outer stalks, then tap Climb. Any of them will do.', 7000); }
+      else if (st.tut === 1 && st.mode === 'idle' && st.cur.kind !== 'ground') { st.tut = 2; st.tutAt = t; mutter('Hand over hand. Up we go.'); toast('Reach for a glowing handhold: push the stick towards it.', 6000); }
+      else if (st.tut === 2 && t > st.tutAt + 8) { st.tut = 3; toast('Hanging tires you. Hold Grip to steady yourself; it costs less strength.', 7000); }
+      else if (st.tut === 3 && st.stamina < 65) { st.tut = 4; toast('Watch the stamina bar. Where the path crosses a broad leaf you rest and recover; tap Climb on when you are ready.', 7000); }
       if (st.best > TOP - 70 && !st.near) { st.near = true; mutter('Cloud! I can see the cloud above!', true); }
       { const tgt = st.mode === 'idle' ? st.cur : st.to, hang = tgt && tgt.kind !== 'ground' && tgt.kind !== 'ledge' && !st.xf;
         if (hang && st.mode !== 'rise') { const kz = sOf(st.y), rj = Math.max(surfRf(st.fr, st.y, st.a), surfRf(st.fr, st.y + 18 * kz, st.a), surfRf(st.fr, st.y + 32 * kz, st.a)) + 3 * SC * kz; st.r = st.mode === 'idle' ? rj : lerp(st.from.r, rj, st.eMove || 0); } }
@@ -311,11 +304,10 @@ function run(G, W) {
       const vig = clamp((st.y - 500) / 260, 0, 1), low = st.stamina < 25 && !walking ? 0.2 * (0.5 + 0.5 * Math.sin(t * 6)) : 0;
       $('clVig').style.opacity = Math.min(1, vig + low); $('clVig').style.background = `radial-gradient(circle at 50% 52%, transparent ${Math.round(lerp(90, 18, vig))}%, rgba(8,10,16,${0.55 + 0.4 * vig}) ${Math.round(lerp(120, 48, vig))}%)`;
       $('clGust').style.opacity = g.phase === 'warn' ? 0.25 + 0.5 * (1 - g.t / 3.2) : g.phase === 'blow' ? 0.8 : 0; $('clGustTxt').style.opacity = 0;
-      if (st.mode !== 'walk') { const onL = st.cur.kind === 'ledge' && st.mode === 'idle', near = !onL && st.mode === 'idle' && holds.some(h => h.kind === 'ledge' && h.gone <= 0 && Math.abs(h.y - st.y) < 40 && reachable(st.cur, h)); $('clHint').textContent = onL ? (st.stamina < 99.5 ? 'Resting on the leaf. Press Space to climb on.' : 'Rested. Press Space to climb on.') : near ? 'A leaf ahead: a place to rest' : ''; $('clHint').style.opacity = $('clHint').textContent ? 1 : 0; }
-      $('clAlt').textContent = st.mode === 'walk' ? 'On the ground' : `Height ${Math.round(st.mode === 'idle' ? st.cur.y : st.to ? st.to.y : st.y)}   ·   ${st.zone === 'lower' ? 'Lower stalk' : st.zone === 'middle' ? 'Middle stalk' : 'Upper stalk'}${st.lastFall != null ? '   ·   last fall at ' + st.lastFall : ''}`;
-      $('clObj').textContent = st.mode === 'walk' ? 'Choose a stalk to climb.' : 'Climb the beanstalk.';
-      $('clBar').firstChild.style.width = st.stamina + '%'; $('clBar').classList.toggle('low', st.stamina < 25); $('clSt').style.opacity = st.mode === 'walk' ? 0.4 : 1;
-      if (st.toastAt && performance.now() > st.toastAt) { $('clToast').style.opacity = 0; st.toastAt = 0; }
+      let leafLine = ''; if (st.mode !== 'walk') { const onL = st.cur.kind === 'ledge' && st.mode === 'idle', near = !onL && st.mode === 'idle' && holds.some(h => h.kind === 'ledge' && h.gone <= 0 && Math.abs(h.y - st.y) < 40 && reachable(st.cur, h)); leafLine = onL ? (st.stamina < 99.5 ? 'Resting on the leaf: your strength is coming back.' : 'Rested: tap Climb on when you are ready.') : near ? 'A leaf ahead: a place to rest.' : ''; }
+      G.hud.objective(st.mode === 'walk' ? 'Choose a stalk to climb.' : leafLine || 'Climb the beanstalk.');
+      G.hud.meter('alt', { label: st.mode === 'walk' ? 'On the ground' : `Height ${Math.round(st.mode === 'idle' ? st.cur.y : st.to ? st.to.y : st.y)}   ·   ${st.zone === 'lower' ? 'Lower stalk' : st.zone === 'middle' ? 'Middle stalk' : 'Upper stalk'}${st.lastFall != null ? '   ·   last fall at ' + st.lastFall : ''}` });
+      G.hud.meter('stamina', st.mode === 'walk' ? null : { label: 'Stamina', value: st.stamina / 100, tone: st.stamina < 25 ? 'low' : '' });
       // The camera: outside him, at his own scale (so as he shrinks the stalk looms), held under the cloud.
       const kk = sOf(st.y);       // (the view is the player's: all the way round, never turned for him; only the cloud ceiling and the ground hold it back; zoom is Chapter One's three steps)
       const walkCam = st.mode === 'walk' || st.mode === 'mount', d = walkCam ? ZOOMS[st.zoom].d : (88 + 14 * (st.zone === 'upper' ? 1 : 0)) * kk * ZF[st.zoom], ax = centreOf(st.fr, st.y);
@@ -332,7 +324,7 @@ function run(G, W) {
     };
     async function finish() {
       // The last leaf: a breath, a line, and then straight up the stalk and into the cloud.
-      const h = st.cur, kk = sOf(st.y), d0 = st.r; G.mode = 'cutscene'; document.body.classList.add('cutscene'); st.mode = 'cut'; st.lock = 0; st.gust = { phase: 'wait', t: 9999 }; hud.style.display = 'none'; ui.show(false); A && A.ambience({ wind: 0.5, birds: 0, fire: 0 });
+      const h = st.cur, kk = sOf(st.y), d0 = st.r; G.mode = 'cutscene'; st.mode = 'cut'; st.lock = 0; st.gust = { phase: 'wait', t: 9999 }; hud.style.display = 'none'; G.hud.reset(); ui.show(false); A && A.ambience({ wind: 0.5, birds: 0, fire: 0 });
       const jp = () => { const c = centreOf(4, st.y); return v(c.x + Math.cos(st.a) * st.r, st.y, c.z + Math.sin(st.a) * st.r); };
       const side = h.a + Math.PI / 2, setCine = (dist, below, lookUp, fov) => { const j = jp(); st.cine = { pos: v(j.x + Math.cos(side) * dist * kk, j.y + below * kk, j.z + Math.sin(side) * dist * kk), look: v(j.x, j.y + lookUp * kk, j.z), fov }; };
       setCine(120, 6, 14, 42); await G.wait(1.6);
@@ -345,12 +337,12 @@ function run(G, W) {
       const up = yRise - y0; setCine(74, -22, 8, 44);
       for (let i = 0; i <= 250; i++) { const u = i / 250; st.y = y0 + up * (0.15 * u + 0.85 * u * u); st.r = rHang; st.mt = i * 0.03 / 0.5; setCine(74 + 12 * u, -22 + 6 * u, 8, 44); await G.wait(0.03); }
       const f = $('fade'); f.style.background = '#fff'; await G.fade(true, 1.4);
-      await G.wait(0.4); cleanup(); f.style.background = ''; G.mode = 'end'; document.body.classList.remove('cutscene'); resolve({ top: true });
+      await G.wait(0.4); cleanup(); f.style.background = ''; G.mode = 'end'; resolve({ top: true });
     }
     // (a tick-mode of 'rise' lets the frame code above keep placing him as st.y changes)
     function cleanup() {
       ended = true; root.removeEventListener('keydown', kd); root.removeEventListener('keyup', ku); el.removeEventListener('wheel', wheel); el.removeEventListener('pointerdown', pd); el.removeEventListener('pointermove', pm); el.removeEventListener('pointerup', pu); el.removeEventListener('pointercancel', pu);
-      G.updaters = G.updaters.filter(u => u !== tick); hud.remove(); css.remove(); ui.destroy(); E.remove(stage); E.fog = fogOld; E.background = bgOld; for (const [l, i0] of lights) l.intensity = i0; jackOut.after = null; jackOut.root.scale.setScalar(SC); camera.near = nearOld;
+      G.updaters = G.updaters.filter(u => u !== tick); hud.remove(); css.remove(); G.hud.reset(); ui.destroy(); E.remove(stage); E.fog = fogOld; E.background = bgOld; for (const [l, i0] of lights) l.intensity = i0; jackOut.after = wasAfter; jackOut.root.scale.setScalar(SC); camera.near = nearOld;
     }
     camera.near = 0.3; camera.updateProjectionMatrix();
     G.updaters.push(tick); G.climb = { st, holds, drop, pick, reachable, grounds };           // (for tools and tests)

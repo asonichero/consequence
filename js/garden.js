@@ -9,7 +9,7 @@
 const THREE = root.THREE, B = root.Blocky, F = root.Farm, A = root.GameAudio, V3 = THREE.Vector3;
 const v = (x, y, z) => new V3(x, y, z), clamp = (x, a, b) => Math.max(a, Math.min(b, x)), lerp = (a, b, t) => a + (b - a) * t;
 const turn = (from, to, t) => { const d = ((to - from + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return from + d * t; };
-const SC = 0.95, WALK = 26, RUN = 50, HEAVY = 15;
+const SC = root.Blocky.SCALE.adult, WALK = 26, RUN = 50, HEAVY = 15;
 const ZOOMS = [{ name: 'Close', d: 52 }, { name: 'Medium', d: 92 }, { name: 'Far', d: 150 }];
 const BOUNDS = { x0: -196, x1: 196, z0: -100, z1: 116 };
 const SOLID = [{ x0: -70, x1: 70, z0: -80, z1: 20 }, { x0: -66, x1: -54, z0: 24, z1: 36 }, { x0: -153, x1: -147, z0: 17, z1: 23 }, { x0: -99, x1: -93, z0: -73, z1: -67 }];      // the cottage, the barrel, the scarecrow, the tree
@@ -28,10 +28,10 @@ function run(G, W, tier) {
   return new Promise(resolve => {
     const { ext, jackOut, aOut, world } = W, scene = ext.scene, mat = F.mat, plain = F.plain, box = F.box;
     const el = G.renderer.domElement;
-    G.setScene(world); G.drone = null; G.mode = 'garden'; document.body.classList.remove('cutscene'); G.hideLine && G.hideLine();
+    G.setScene(world); G.drone = null; G.mode = 'explore'; G.hideLine && G.hideLine();
     A && A.ambience({ wind: 0.3, birds: 0, fire: 0 });
     // ── Jack, outside the closed door. ──
-    const st = { pos: v(DOOR.x, 0, DOOR.z + 10), heading: Math.PI, yaw: 0, pitch: 0.42, zoom: 1, y: 0, hold: null, act: null, phase: 'clear', toastAt: 0, speedN: 0, inside: false };
+    const st = { pos: v(DOOR.x, 0, DOOR.z + 10), heading: Math.PI, yaw: 0, pitch: 0.42, zoom: 1, y: 0, hold: null, act: null, phase: 'clear', speedN: 0, inside: false };
     jackOut.root.visible = true; jackOut.root.rotation.y = Math.PI; jackOut.root.position.copy(st.pos); aOut.fist = 0; aOut.bow = 0.1; aOut.hold = 0; aOut.cover = 0; aOut.look = 0; aOut.shuffle = 0; aOut.rub = 0;
     W.paintJack(jackOut, { expr: 1 });
     ext.doorLeaf.rotation.y = 0;
@@ -70,20 +70,9 @@ function run(G, W, tier) {
     };
     const rockInHand = new THREE.Group(); box(7, 5, 6, mat('stone'), 0, 0, 0, rockInHand); box(4, 3, 4, mat('stone'), 1.2, 3, 0.4, rockInHand); rockInHand.position.set(0, 6, 5.5); rockInHand.visible = false; jackOut.torso.add(rockInHand);
 
-    // ── HUD ──
-    const css = document.createElement('style');
-    css.textContent = `#gHud { position: fixed; inset: 0; pointer-events: none; z-index: 12; font-family: Georgia, serif; color: #ece8df; }
-      #gObj { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(10,12,16,0.78); border: 1px solid #4a4d58; border-radius: 8px; padding: 8px 16px; font-size: clamp(13px, 1.9vw, 17px); max-width: 80vw; text-align: center; }
-      #gHint { position: absolute; left: 50%; bottom: 18vh; transform: translateX(-50%); background: rgba(10,12,16,0.85); border: 1px solid #c9a84c; color: #f0d98a; padding: 6px 14px; border-radius: 6px; font-size: 15px; display: none; }
-      #gToast { position: absolute; left: 50%; bottom: 8vh; transform: translateX(-50%); background: rgba(10,12,16,0.85); border: 1px solid #4a4d58; padding: 8px 16px; border-radius: 8px; font-size: 14px; max-width: 86vw; text-align: center; opacity: 0; transition: opacity .4s; }
-      #gBeans { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; } #gBeans i { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #000; opacity: .35; } #gBeans i.on { opacity: 1; }`;
-    document.head.appendChild(css);
-    const hud = document.createElement('div'); hud.id = 'gHud';
-    hud.innerHTML = '<div id="gObj"></div><div id="gBeans"></div><div id="gHint"></div><div id="gToast"></div>';
-    document.body.appendChild(hud);
+    // ── HUD: the shared one (G.hud); the touch buttons say what a tap will do. ──
     const $ = id => document.getElementById(id);
-    BEANS.forEach(([n, c]) => { const i = document.createElement('i'); i.style.background = '#' + c.toString(16).padStart(6, '0'); i.title = n; $('gBeans').appendChild(i); });
-    const toast = (t, ms = 3200) => { $('gToast').textContent = root.Tips.clean(t); $('gToast').style.opacity = 1; st.toastAt = performance.now() + ms; };
+    const toast = (t, ms = 3200) => G.hud.toast(t, ms);
     const keys = {}, ui = root.TouchUI.create({ keys, run: true, jump: true, act: true, drop: true, cam: true }), stick = ui.stick;
     const KM = { w: 'up', W: 'up', ArrowUp: 'up', s: 'down', S: 'down', ArrowDown: 'down', a: 'left', A: 'left', ArrowLeft: 'left', d: 'right', D: 'right', ArrowRight: 'right', Shift: 'run' };
     const typing = e => e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
@@ -105,13 +94,11 @@ function run(G, W, tier) {
     const cellOf = () => { const i = Math.floor((st.pos.x - (PLOT.cx - HALF)) / CELL), j = Math.floor((st.pos.z - (PLOT.cz - HALF)) / CELL); return i >= 0 && i < PLOT.n && j >= 0 && j < PLOT.n ? [i, j] : null; };
     const pipAt = (i, j) => pips.find(p => p.i === i && p.j === j);
     function setObjective() {
-      const o = $('gObj'), r = remaining();
-      if (st.phase === 'clear') o.textContent = `Clear the plot of rocks and weeds.  Rocks left: ${r.rocks}   Weeds left: ${r.weeds}`;
-      else if (st.phase === 'till') o.textContent = `Take the hoe from the cottage wall and till five squares like the five on a die: the four corners and the middle.  (${pips.filter(p => p.tilled).length}/5)`;
-      else if (st.phase === 'plant') o.textContent = `Plant a bean in each furrow, one at a time.  (${pips.filter(p => p.bean).length}/5)`;
-      else if (st.phase === 'home') o.textContent = 'Go back to the cottage door.';
-      else o.textContent = '';
-      [...$('gBeans').children].forEach((c, k) => c.classList.toggle('on', k >= pips.filter(p => p.bean).length));
+      const r = remaining();
+      G.hud.objective(st.phase === 'clear' ? `Clear the plot of rocks and weeds.  Rocks left: ${r.rocks}   Weeds left: ${r.weeds}`
+        : st.phase === 'till' ? `Take the hoe from the cottage wall and till five squares like the five on a die: the four corners and the middle.  (${pips.filter(p => p.tilled).length}/5)`
+        : st.phase === 'plant' ? `Plant a bean in each furrow, one at a time.  (${pips.filter(p => p.bean).length}/5)`
+        : st.phase === 'home' ? 'Go back to the cottage door.' : '');
     }
     const doAct = (kind, dur, then) => { st.act = { kind, t: 0, dur, then }; aOut.speed = 0; };
     function putDown() {
@@ -149,7 +136,7 @@ function run(G, W, tier) {
       if (st.phase === 'home' && near(DOOR, 20)) { goInside(); return; }
       // Weeds, while the ground is being cleared (the stones are lifted with Q).
       if (st.phase === 'clear') {
-        if (st.hold === 'rock') { toast('Put the stone down first (Q).'); return; }
+        if (st.hold === 'rock') { toast('Put the stone down first.'); return; }
         let bw = null, wd = 10; for (const w of weeds) if (!w.gone) { const d = Math.hypot(st.pos.x - w.g.position.x, st.pos.z - w.g.position.z); if (d < wd) { wd = d; bw = w; } }
         if (bw) {
           if (st.hold === 'hoe') layHoe();
@@ -193,14 +180,14 @@ function run(G, W, tier) {
       st.act = null; st.phase = 'home'; setObjective(); toast('Back to the cottage door.', 3600);
     }
     async function goInside() {
-      st.inside = true; st.act = { kind: 'idle', t: 0, dur: 99 }; $('gHint').style.display = 'none'; hud.style.display = 'none'; ui.show(false);
+      st.inside = true; st.act = { kind: 'idle', t: 0, dur: 99 }; G.hud.reset(); ui.show(false); G.setMode('cutscene');       // (the way home is a cutscene, with its Skip)
       // The door opens; he steps in.
-      const t0 = G.t; while (G.t - t0 < 0.8) { ext.doorLeaf.rotation.y = lerp(0, -1.9, clamp((G.t - t0) / 0.8, 0, 1)); await G.wait(0.03); }
+      for (let i = 1; i <= 27; i++) { ext.doorLeaf.rotation.y = lerp(0, -1.9, i / 27); await G.wait(0.03); }
       A && A.latch && A.latch();
       const to = v(DOOR.x + 2, 0, DOOR.z - 8); st.heading = Math.atan2(to.x - st.pos.x, to.z - st.pos.z);
       while (Math.hypot(to.x - st.pos.x, to.z - st.pos.z) > 1.5) { const d = Math.hypot(to.x - st.pos.x, to.z - st.pos.z), s = Math.min(d, WALK * SC * 0.04); st.heading = turn(st.heading, Math.atan2(to.x - st.pos.x, to.z - st.pos.z), 0.3); st.pos.x += Math.sin(st.heading) * s; st.pos.z += Math.cos(st.heading) * s; aOut.speed = 24; aOut.phase += s * 0.42; jackOut.root.position.copy(st.pos); jackOut.root.rotation.y = st.heading; await G.wait(0.04); }
       jackOut.root.visible = false; aOut.speed = 0;
-      const t1 = G.t; while (G.t - t1 < 0.7) { ext.doorLeaf.rotation.y = lerp(-1.9, 0, clamp((G.t - t1) / 0.7, 0, 1)); await G.wait(0.03); }
+      for (let i = 1; i <= 23; i++) { ext.doorLeaf.rotation.y = lerp(-1.9, 0, i / 23); await G.wait(0.03); }
       A && A.thwack && A.thwack(0.3, true, 0.5);
       await G.wait(0.8);
       // Up and away, to the angle of the title sequence.
@@ -213,7 +200,7 @@ function run(G, W, tier) {
     }
     function cleanup() {
       root.removeEventListener('keydown', kd); root.removeEventListener('keyup', ku); el.removeEventListener('pointerdown', pd); el.removeEventListener('pointermove', pm); el.removeEventListener('pointerup', pu); el.removeEventListener('pointercancel', pu); el.removeEventListener('wheel', wheel);
-      G.updaters = G.updaters.filter(u => u !== tick); hud.remove(); css.remove(); ui.destroy(); scene.remove(glow); G.mode = 'end';
+      G.updaters = G.updaters.filter(u => u !== tick); G.hud.reset(); ui.destroy(); scene.remove(glow); G.mode = 'end';
     }
 
     // ── Each frame. ──
@@ -247,21 +234,26 @@ function run(G, W, tier) {
       // The hint, for what E would do.
       let hint = '';
       if (!st.act && !st.inside) {
-        if (st.phase === 'home' && near(DOOR, 20)) hint = 'E: open the door';
+        if (st.phase === 'home' && near(DOOR, 20)) hint = 'open';
         else if (st.phase === 'clear') {
-          if (st.hold === 'rock') hint = inPlot(st.pos, 3) ? 'Carry it off the plot' : 'Q: put the stone down';
-          else { for (const r of rocks) if (!r.out && r.g.parent === stage && Math.hypot(st.pos.x - r.g.position.x, st.pos.z - r.g.position.z) < 12 && inPlot(r.g.position, 8)) hint = 'Q: lift the stone'; if (!hint) for (const w of weeds) if (!w.gone && Math.hypot(st.pos.x - w.g.position.x, st.pos.z - w.g.position.z) < 10) hint = 'E: pull the weed'; }
-        } else if (st.phase === 'till' && st.hold === 'hoe') { const c = cellOf(), pip = c && pipAt(c[0], c[1]); if (pip && !pip.tilled) hint = 'E: till this square'; }
-        else if (st.phase === 'plant') { const c = cellOf(), pip = c && pipAt(c[0], c[1]); if (pip && pip.tilled && !pip.bean) hint = 'E: plant a bean'; }
-        if (!hint && st.hold !== 'hoe' && st.hold !== 'rock' && st.phase !== 'plant' && st.phase !== 'home') { const hp = hoe.getWorldPosition(new V3()); if (hoe.parent !== holder && Math.hypot(st.pos.x - hp.x, st.pos.z - hp.z) < 16) hint = 'Q: take the hoe'; }
+          if (st.hold === 'rock') hint = inPlot(st.pos, 3) ? 'carry' : 'putStone';
+          else { for (const r of rocks) if (!r.out && r.g.parent === stage && Math.hypot(st.pos.x - r.g.position.x, st.pos.z - r.g.position.z) < 12 && inPlot(r.g.position, 8)) hint = 'lift'; if (!hint) for (const w of weeds) if (!w.gone && Math.hypot(st.pos.x - w.g.position.x, st.pos.z - w.g.position.z) < 10) hint = 'pull'; }
+        } else if (st.phase === 'till' && st.hold === 'hoe') { const c = cellOf(), pip = c && pipAt(c[0], c[1]); if (pip && !pip.tilled) hint = 'till'; }
+        else if (st.phase === 'plant') { const c = cellOf(), pip = c && pipAt(c[0], c[1]); if (pip && pip.tilled && !pip.bean) hint = 'plant'; }
+        if (!hint && st.hold !== 'hoe' && st.hold !== 'rock' && st.phase !== 'plant' && st.phase !== 'home') { const hp = hoe.getWorldPosition(new V3()); if (hoe.parent !== holder && Math.hypot(st.pos.x - hp.x, st.pos.z - hp.z) < 16) hint = 'takeHoe'; }
       }
-      if (!hint && st.hold === 'hoe' && !st.act && !st.inside) hint = 'Q: lay the hoe down';
-      $('gHint').textContent = hint; $('gHint').style.display = hint ? 'block' : 'none';
-      { const L = { 'E: open the door': 'Open', 'E: pull the weed': 'Pull weed', 'E: till this square': 'Till', 'E: plant a bean': 'Plant' }[hint], canTake = hint === 'Q: lift the stone' || hint === 'Q: take the hoe';
+      if (!hint && st.hold === 'hoe' && !st.act && !st.inside) hint = 'layHoe';
+      { const L = { open: 'Open', pull: 'Pull weed', till: 'Till', plant: 'Plant' }[hint], canTake = hint === 'lift' || hint === 'takeHoe';
         ui.set('act', L ? { label: L, enabled: true } : { label: 'Do', enabled: false });
         const can = !st.act && !st.inside && (canTake || st.hold === 'hoe' || (st.hold === 'rock' && !inPlot(st.pos, 3)));
         ui.set('drop', { label: st.hold ? 'Put down' : 'Pick up', enabled: can }); }
-      if (st.toastAt && performance.now() > st.toastAt) { $('gToast').style.opacity = 0; st.toastAt = 0; }
+      { let best = null, bd = 1e9; const pick = (x, z) => { const d = Math.hypot(x - st.pos.x, z - st.pos.z); if (d < bd) { bd = d; best = { x, z }; } };       // (what is still to do, and the nearest of it: the world points at it)
+        if (st.inside) best = null;
+        else if (st.phase === 'clear') { if (st.hold !== 'rock') { for (const r of rocks) if (!r.out && r.g.parent === stage) pick(r.g.position.x, r.g.position.z); for (const w of weeds) if (!w.gone) pick(w.g.position.x, w.g.position.z); } }
+        else if (st.phase === 'till') { if (st.hold === 'hoe') { for (const p of pips) if (!p.tilled) pick(p.p.x, p.p.z); } else { const hp = hoe.getWorldPosition(new V3()); pick(hp.x, hp.z); } }
+        else if (st.phase === 'plant') { for (const p of pips) if (p.tilled && !p.bean) pick(p.p.x, p.p.z); }
+        else if (st.phase === 'home') pick(DOOR.x, DOOR.z);
+        G.cue.set('goal', best ? { x: best.x, z: best.z, r: st.phase === 'home' ? 14 : 8 } : null); }
       // The camera: round Jack, as in Chapter One.
       if (!st.inside) {
         const d = ZOOMS[st.zoom].d, p = st.pitch, at = v(st.pos.x, 15 * SC, st.pos.z);

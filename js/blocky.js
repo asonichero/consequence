@@ -585,13 +585,17 @@ function apply() {
     const l = this[k];
     l.thigh.rotation.x = s.thighX; l.thigh.rotation.z = l.sign * s.spread; l.knee.rotation.x = s.shinX;
   }
-  // Whatever the base pose does not set returns to standard each frame (the elbows, the wrists, the arms' turn, the thighs' spread and turn), so that nothing a scene bent stays bent once the scene stops asking for it.
+  // Whatever the base pose does not set returns to standard each frame (the elbows, the wrists, the arms' turn, the thighs' spread and turn, the knees' sideways turn, the trunk, the head's turn and tilt, the hips), so that nothing a scene bent stays bent once the scene stops asking for it.
   for (const k of ['elbow', 'elbowL', 'wrist', 'wristL']) if (this[k]) this[k].rotation.set(0, 0, 0);
   for (const k of ['armL', 'armR']) { const a = this[k]; a.rotation.order = 'ZXY'; a.rotation.y = 0; }
-  for (const k of ['legL', 'legR']) { const t = this[k].thigh; t.rotation.order = 'ZXY'; t.rotation.y = 0; }
+  for (const k of ['legL', 'legR']) { const t = this[k].thigh; t.rotation.order = 'ZXY'; t.rotation.y = 0; this[k].knee.rotation.y = 0; this[k].knee.rotation.z = 0; }
+  this.torso.rotation.order = 'XYZ'; this.torso.rotation.set(0, 0, 0); this.neck.rotation.y = 0; this.neck.rotation.z = 0; this.hips.rotation.set(0, 0, 0);       // (the trunk, the head's turn and tilt and the hips too: a lean or a turn a scene gave them does not outlast the scene's own asking)
   if (this.after) this.after(this);   // a scene's own additions to the pose (the lap scene's swing and kicks)
 }
 
+// A scene's hook over a rig, with its undoing: `const undo = hook(rig, fn)` puts `fn` in the place of whatever hook the rig had (the one the scene comes after), and `undo()` puts that back, so that a rig that
+// goes on into the next scene still moves as that scene expects.
+function hook(rig, fn) { const was = rig.after; rig.after = fn; return () => { if (rig.after === fn) rig.after = was; }; }
 function setPose(rig, name) {
   rig.target = Object.assign({}, POSES[name]); rig.pose = name;
   if (name !== 'sit' && rig.legL && rig.legL.knee.children[0] && rig.legL.knee.children[0].scale.y !== 1) for (const l of [rig.legL, rig.legR]) { const sm = l.knee.children[0]; sm.scale.y = 1; sm.position.y = -3; }   // (standing again: the shins are their own length)
@@ -646,5 +650,8 @@ function makeBirch() {
   }
   return { root, twigs, tips };
 }
-root.Blocky = { JACK_EXPR, jackExprIndex, seatFeet, BIRCH, makeBirch, buildCharacter, sideOuter, SIDES, FACES, CHAIR, makeChair, makeJack, makeGerda, setPose, step, POSES, Skin, OUTFITS, paintGerdaInto, paintJackInto, paintGlutesInto, makeGlutes, boxGeo, faceRect };
+// The sizes of the cast, set once: an ordinary adult (Jack at full size, his mother, the merchant, the peddler) stands at 0.95 of the model's own scale and Gerda at 1.0; in her castle everything is 1.4 times that again
+// (`height`: the model's own height in pixels at the cottage's 100%; `stageY`: how high a seated figure's hips rest on the cottage's chair).
+const SCALE = { adult: 0.95, gerda: 1.0, castle: 1.4, height: 31, stageY: 5.7 };
+root.Blocky = { SCALE, hook, JACK_EXPR, jackExprIndex, seatFeet, BIRCH, makeBirch, buildCharacter, sideOuter, SIDES, FACES, CHAIR, makeChair, makeJack, makeGerda, setPose, step, POSES, Skin, OUTFITS, paintGerdaInto, paintJackInto, paintGlutesInto, makeGlutes, boxGeo, faceRect };
 })(typeof window !== 'undefined' ? window : globalThis);

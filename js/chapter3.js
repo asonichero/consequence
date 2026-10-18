@@ -11,7 +11,7 @@ const THREE = root.THREE, B = root.Blocky, F = root.Farm, A = root.GameAudio, V3
 const v = (x, y, z) => new V3(x, y, z), clamp = (x, a, b) => Math.max(a, Math.min(b, x)), lerp = (a, b, t) => a + (b - a) * t;
 const ease = x => x * x * (3 - 2 * x);
 const turn = (from, to, t) => { const d = ((to - from + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return from + d * t; };
-const SC = 0.95, PLOT = F.PLOT;
+const SC = root.Blocky.SCALE.adult, PLOT = F.PLOT;
 const basis = (x, y, z) => new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
 const Q_SIDE = basis(v(0, 1, 0), v(-1, 0, 0), v(0, 0, 1)), Q_BACK = basis(v(0, 0, -1), v(-1, 0, 0), v(0, 1, 0)), Q_SIT = basis(v(0, 0, -1), v(0, 1, 0), v(1, 0, 0));
 
@@ -62,9 +62,13 @@ function ensureDawn(E) {
 const STALK_VIEW = () => ({ pos: new THREE.Vector3(250, 230, 520), look: new THREE.Vector3(-40, 330, 0), fov: 66 });
 
 async function run(G, W, opts) {
+  const was = W.jackIn.after;
+  try { return await runScene(G, W, opts); } finally { W.jackIn.after = was; }       // (his body goes on to the next scene as the last one left it: the night's hook, not this one's)
+}
+async function runScene(G, W, opts) {
   G.skipping = false;       // (a Skip applies to the scene it was pressed in)
   const { ext, int, jackIn, jackOut, ja, aOut } = W, A_ = A, I = int.scene, E = ext.scene;
-  G.mode = 'cutscene'; document.body.classList.add('cutscene'); G.drone = null; G.keepLine = false;
+  G.mode = 'cutscene'; G.drone = null; G.keepLine = false;
   // ── The room, in the dark, the fire banked low. ──
   int.setBank(0.12); int.hemi.intensity = 0.1; int.dim.intensity = 0.03;
   const moon = new THREE.PointLight(0x8aa0d8, 0.7, 95, 1.4); moon.position.set(-34, 30, 64); I.add(moon);
@@ -88,7 +92,7 @@ async function run(G, W, opts) {
   };
   const hipsLocal = v(0, 12 * SC, 0);
   const setBody = (Q, p) => { jackIn.root.quaternion.copy(Q); jackIn.root.position.copy(p).sub(hipsLocal.clone().applyQuaternion(Q)); };
-  const tween = async (secs, fn) => { if (G.skipping) { fn(1, 1); return; } const t0 = G.t; for (;;) { const k = clamp((G.t - t0) / secs, 0, 1); fn(k, ease(k)); if (k >= 1) break; await G.wait(0.03); } };
+  const tween = async (secs, fn) => { if (G.skipping) { fn(1, 1); return; } const t0 = G.t; for (;;) { const k = clamp((G.t - t0) / secs, 0, 1); fn(k, ease(k)); if (k >= 1) break; if (G.skipping) { fn(1, 1); break; } await G.wait(0.03); } };
   const BED_Y = 6.2, HIPS_SIDE = v(-28.5, BED_Y + 4.2, 62.5), HIPS_BACK = v(-28.5, BED_Y + 2.4, 62), HIPS_SIT = v(-34, BED_Y + 2.2, 62);
   const placeBlanket = (x, y, z, sx) => { blanket.position.set(x, y, z); blanket.scale.set(sx == null ? 1 : sx, 1, 1); coverOn = false; drapes.forEach(d => { d.visible = false; }); };
   const fitBlanket = () => {
@@ -111,7 +115,7 @@ async function run(G, W, opts) {
   async function dress() {
     G.skipping = false;                                    // (a skipped cutscene hands over to play at normal speed)
     ensureDawn(E); jackOut.root.visible = false; G.save({ step: 'dress' }); G.snapshotFarm(W.world, STALK_VIEW);       // (a save point: Continue comes back here, and the title shows the farm at dawn)
-    G.setScene(W.iworld); G.drone = null; G.mode = 'play'; document.body.classList.remove('cutscene'); G.hideLine && G.hideLine();
+    G.setScene(W.iworld); G.drone = null; G.mode = 'explore'; G.hideLine && G.hideLine();
     A_ && A_.ambience({ wind: 0.1, birds: 0.5, fire: 0.25 });
     int.setBank(0.3); int.hemi.intensity = 0.55; int.dim.intensity = 0.6; int.dim.color.set(0xffd2a0); moon.visible = false; int.ceiling.visible = false;
     if (!blanket.parent) I.add(blanket); placeBlanket(-8, 8.6, 66, 0.55);
@@ -119,7 +123,7 @@ async function run(G, W, opts) {
     Object.assign(P, { lie: 0, thigh: 0, knee: 0, armX: 0.05, armZ: 0.12, torso: 0.05, neckX: 0.1, neckY: 0, rub: 0 }); ja.speed = 0;
     jackIn.root.visible = true; jackIn.root.scale.setScalar(SC); W.mother.root.visible = false; int.chair.visible = true;
     int.doorLeaf.rotation.y = 0;
-    const st = { pos: v(34, 0, 56), heading: Math.PI, yaw: Math.PI, pitch: 0.4, zoom: 1, dressed: false, knife: false, act: null, toastAt: 0, capAt: 0, stairsNear: false, leaving: false };
+    const st = { pos: v(34, 0, 56), heading: Math.PI, yaw: Math.PI, pitch: 0.4, zoom: 1, dressed: false, knife: false, act: null, capAt: 0, stairsNear: false, leaving: false };
     const ZOOMS = [{ name: 'Close', d: 40 }, { name: 'Medium', d: 64 }, { name: 'Far', d: 92 }];
     const WARD = v(55, 0, -34), DRAW = v(55, 0, 4), STAIRS = v(-62, 0, 22);
     // What blocks him: the fixed furniture, and the movable pieces wherever the room layout has put them (half-widths across x and z, with the piece turned a quarter or not).
@@ -134,20 +138,11 @@ async function run(G, W, opts) {
     const satchel = new THREE.Group(), leather = F.plain('#8a6a42');                                  // (worn across the body, the bag at the right hip)
     F.box(1.3, 10, 4.7, F.plain('#6a4a2e'), 0, 6.5, 0, satchel).rotation.z = 0.37; F.box(2.6, 7, 8, leather, 5.4, 3, 0, satchel); F.box(2.9, 3, 8.2, F.plain('#6a4a2e'), 5.4, 5.6, 0, satchel); F.box(0.8, 1.6, 1.4, F.plain('#b8923a'), 6.9, 4.4, 0, satchel); satchel.visible = false; jackIn.torso.add(satchel);
 
-    const css = document.createElement('style');
-    css.textContent = `#cHud { position: fixed; inset: 0; pointer-events: none; z-index: 12; font-family: Georgia, serif; color: #ece8df; }
-      #cObj { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(10,12,16,0.78); border: 1px solid #4a4d58; border-radius: 8px; padding: 8px 16px; font-size: clamp(13px, 1.9vw, 17px); text-align: center; max-width: 80vw; } #cObj .done { opacity: .5; text-decoration: line-through; }
-      #cHint { position: absolute; left: 50%; bottom: 18vh; transform: translateX(-50%); background: rgba(10,12,16,0.85); border: 1px solid #c9a84c; color: #f0d98a; padding: 6px 14px; border-radius: 6px; font-size: 15px; display: none; }
-      #cToast { position: absolute; left: 50%; bottom: 8vh; transform: translateX(-50%); background: rgba(10,12,16,0.85); border: 1px solid #4a4d58; padding: 8px 16px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .4s; }`;
-    document.head.appendChild(css);
-    const hud = document.createElement('div'); hud.id = 'cHud';
-    hud.innerHTML = '<div id="cObj"></div><div id="cHint"></div><div id="cToast"></div>';
-    document.body.appendChild(hud);
     const $ = id => document.getElementById(id), el = G.renderer.domElement;
-    const toast = (t, ms = 3000) => { $('cToast').textContent = root.Tips.clean(t); $('cToast').style.opacity = 1; st.toastAt = performance.now() + ms; };
-    const objective = () => { $('cObj').innerHTML = `<span class="${st.dressed ? 'done' : ''}">Dress (the wardrobe)</span> &nbsp;·&nbsp; <span class="${st.knife ? 'done' : ''}">Take Father’s knife (the chest of drawers)</span>`; };
+    const toast = (t, ms = 3000) => G.hud.toast(t, ms);
+    const objective = () => G.hud.objective([{ text: 'Dress (the wardrobe)', done: st.dressed }, { text: 'Take Father’s knife (the chest of drawers)', done: st.knife }]);
     const mutter = (text, force) => { if (!force && performance.now() < st.capAt) return; st.capAt = performance.now() + 6500; G.caption('jack', text); };
-    const keys = {}, ui = root.TouchUI.create({ keys, run: true, jump: true, act: true, drop: true, cam: true }), stick = ui.stick, KM = { w: 'up', W: 'up', ArrowUp: 'up', s: 'down', S: 'down', ArrowDown: 'down', a: 'left', A: 'left', ArrowLeft: 'left', d: 'right', D: 'right', ArrowRight: 'right', Shift: 'run' };
+    const keys = {}, ui = root.TouchUI.create({ keys, run: true, jump: true, act: true, cam: true }), stick = ui.stick, KM = { w: 'up', W: 'up', ArrowUp: 'up', s: 'down', S: 'down', ArrowDown: 'down', a: 'left', A: 'left', ArrowLeft: 'left', d: 'right', D: 'right', ArrowRight: 'right', Shift: 'run' };
     const typing = e => e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
     const kd = e => { if (typing(e)) return; const k = KM[e.key]; if (k) { keys[k] = true; if (e.key.startsWith('Arrow')) e.preventDefault(); } if (e.repeat) return; if (e.key === 'e' || e.key === 'E') interact(); else if (e.key === 'q' || e.key === 'Q') takeKnife(); else if (e.key === 'v' || e.key === 'V') zoom(); else if (e.key === ' ') { e.preventDefault(); ui.on.jump(); } };
     const ku = e => { const k = KM[e.key]; if (k) keys[k] = false; };
@@ -158,7 +153,7 @@ async function run(G, W, opts) {
     const wheel = e => { e.preventDefault(); zoom(e.deltaY > 0 ? 1 : -1); }; el.addEventListener('wheel', wheel, { passive: false });
     const camIcon = () => ui.set('cam', { icon: 'camera', title: 'Camera: ' + ZOOMS[st.zoom].name });
     function zoom(dir) { st.zoom = (st.zoom + (dir || 1) + ZOOMS.length) % ZOOMS.length; camIcon(); }
-    camIcon(); ui.on.cam = () => zoom(); ui.on.act = () => interact(); ui.on.drop = () => takeKnife(); const hop = { y: 0, vy: 0 }, canHop = () => !st.act && !st.leaving && hop.y <= 0.01; ui.on.jump = () => { if (canHop()) hop.vy = 112 * SC; };
+    camIcon(); ui.on.cam = () => zoom(); ui.on.act = () => { if (near(WARD, 20)) interact(); else takeKnife(); }; const hop = { y: 0, vy: 0 }, canHop = () => !st.act && !st.leaving && hop.y <= 0.01; ui.on.jump = () => { if (canHop()) hop.vy = 112 * SC; };
 
     const near = (p, r) => Math.hypot(st.pos.x - p.x, st.pos.z - p.z) < r;
     const act = (dur, then) => { st.act = { t: 0, dur, then }; ja.speed = 0; };
@@ -181,13 +176,13 @@ async function run(G, W, opts) {
     }
     let resolveDress; const done = new Promise(r => { resolveDress = r; });
     async function leave() {
-      st.leaving = true; $('cHint').style.display = 'none'; hud.style.display = 'none'; ui.show(false); st.act = null; ja.speed = 0;
+      st.leaving = true; G.hud.reset(); ui.show(false); G.setMode('cutscene'); st.act = null; ja.speed = 0;
       st.heading = 0; jackIn.root.quaternion.setFromAxisAngle(v(0, 1, 0), 0); await tween(0.8, (k, e) => { int.doorLeaf.rotation.y = lerp(0, -1.9, e); }); A_ && A_.latch && A_.latch();
       while (st.pos.z < 86) { st.pos.z += 0.7; jackIn.root.position.set(st.pos.x, 0, st.pos.z); ja.speed = 22; ja.phase += 0.3; await G.wait(0.04); }
       jackIn.root.visible = false; ja.speed = 0; await G.wait(0.6);
       A_ && A_.stopMusic && A_.stopMusic(2.5); await G.fade(true, 1.8); A_ && A_.ambience({ wind: 0, birds: 0, fire: 0 });
       root.removeEventListener('keydown', kd); root.removeEventListener('keyup', ku); el.removeEventListener('pointerdown', pd); el.removeEventListener('pointermove', pm); el.removeEventListener('pointerup', pu); el.removeEventListener('pointercancel', pu); el.removeEventListener('wheel', wheel);
-      G.updaters = G.updaters.filter(u => u !== tick); hud.remove(); css.remove(); ui.destroy(); G.mode = 'end'; resolveDress();
+      G.updaters = G.updaters.filter(u => u !== tick); G.hud.reset(); ui.destroy(); G.mode = 'end'; resolveDress();
     }
     const camPos = new V3(), camLook = new V3();
     const tick = dt => {
@@ -215,10 +210,9 @@ async function run(G, W, opts) {
         else mutter('Not yet. I still need Father’s knife from the drawers.');
         st.pos.z = Math.min(st.pos.z, 64); st.heading = Math.PI;
       }
-      let hint = ''; if (!st.act) { if (near(WARD, 20)) hint = st.dressed ? '' : 'E: dress'; else if (near(DRAW, 20)) hint = st.knife ? '' : 'Q: take Father’s knife'; }
-      $('cHint').textContent = hint; $('cHint').style.display = hint ? 'block' : 'none';
-      ui.set('act', hint === 'E: dress' ? { label: 'Dress', enabled: true } : { label: 'Do', enabled: false }); ui.set('drop', { label: 'Take', enabled: hint === 'Q: take Father’s knife' });
-      if (st.toastAt && performance.now() > st.toastAt) { $('cToast').style.opacity = 0; st.toastAt = 0; }
+      let verb = ''; if (!st.act) { if (near(WARD, 20)) verb = st.dressed ? '' : 'Dress'; else if (near(DRAW, 20)) verb = st.knife ? '' : 'Take'; }
+      ui.set('act', verb ? { label: verb, enabled: true, ready: true } : { label: 'Do', enabled: false, ready: false });
+      G.cue.set('goal', st.leaving ? null : !st.dressed ? { x: WARD.x, z: WARD.z, r: 14 } : !st.knife ? { x: DRAW.x, z: DRAW.z, r: 14 } : { x: 34, z: 76, r: 12 });       // (the wardrobe, the drawers, then the door)
       const d = ZOOMS[st.zoom].d, p = st.pitch, at = v(st.pos.x, 15 * SC, st.pos.z);
       const want = v(clamp(at.x + Math.sin(st.yaw) * Math.cos(p) * d, -70, 70), clamp(at.y + Math.sin(p) * d, 4, 56), clamp(at.z + Math.cos(st.yaw) * Math.cos(p) * d, -70, 70));
       if (camPos.lengthSq() === 0) camPos.copy(want); else camPos.lerp(want, Math.min(1, dt * 10)); camLook.copy(at);

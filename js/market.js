@@ -1,7 +1,7 @@
 // Climbing Toward Consequence — Chapter One, "Market Day" (its first part): the first playable sequence, a tutorial in animal care.
 //   1. A short dialogue beat outside the cottage: Mother in the doorway, Jack facing her; she sends him to market with the cow, doubts him, and goes back inside.
 //   2. Play: fetch the cow's lead from the cowshed, then win Milky-White round enough to put it on her. She starts out trusting Jack 90%, but quick movement near her frightens her
-//      exactly as it did the hen in the test level (she backs away and her trust drops), and she will not take the lead until her trust is back to 100%. Sneak (C) and wait.
+//      exactly as it did the hen in the test level (she backs away and her trust drops), and she will not take the lead until her trust is back to 100%. Sneak and wait.
 //   3. A short closing scene (he talks to her, the player presses Continue) and a fade to black.
 // Camera: always centred on Jack, starting a little above him; V (or the zoom button, or the wheel) cycles three zoom levels; dragging turns the angle. Movement is WASD relative to the
 // camera, Jack turning (not strafing) to go where it points.
@@ -10,7 +10,7 @@
 const THREE = root.THREE, B = root.Blocky, C = root.Cast, A = root.GameAudio, V3 = THREE.Vector3;
 const v = (x, y, z) => new V3(x, y, z), clamp = (x, a, b) => Math.max(a, Math.min(b, x)), lerp = (a, b, t) => a + (b - a) * t;
 const turn = (from, to, t) => { const d = ((to - from + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return from + d * t; };
-const SC = 0.95, WALK = 26, CREEP = 7.5, RUN = 50, ALARM = 13, CALM = 9.5;               // the same pace rules as the hen in the test level
+const SC = root.Blocky.SCALE.adult, WALK = 26, CREEP = 7.5, RUN = 50, ALARM = 13, CALM = 9.5;               // the same pace rules as the hen in the test level
 const ZOOMS = [{ name: 'Close', d: 52 }, { name: 'Medium', d: 92 }, { name: 'Far', d: 150 }];
 const BOUNDS = { x0: -198, x1: 198, z0: -104, z1: 116 }, COWB = { x0: 162, x1: 202, z0: -6, z1: 104 };
 const INF = 1e9, GRAV = 420, JUMP_V = 112;                                                      // a jump rises about 15 units: enough to land on the feed or the trough, not on the barrel
@@ -78,7 +78,7 @@ async function run(G, W, M) {
   G.skipping = false;       // (a Skip applies to the scene it was pressed in)
   const { ext, jack, mother, ja, ma, paintJack, hanging, held, cord, halter } = M, cowM = ext.cow, A_ = A;
   const scene = ext.scene;
-  G.mode = 'cutscene'; document.body.classList.add('cutscene');
+  G.mode = 'cutscene';
   // The door stands open, and Mother in it; Jack faces her in the pale morning light.
   G.setScene(ext); G.drone = null; ext.doorLeaf.rotation.y = -1.9;
   mother.root.position.set(DOOR.x + 2, 0, DOOR.z); mother.root.rotation.y = 0; mother.root.visible = true; mother.setExpr(1); ma.arms = 1; ma.gesture = 0; ma.wag = 0; ma.chin = 0; ma.speed = 0;
@@ -124,9 +124,9 @@ async function run(G, W, M) {
 }
 
 function playLoop(G, W, M) {
-  const { ext, jack, ja, hanging, held, cord, halter, dropped } = M, cowM = ext.cow, ui = hud(), scene = ext.scene;
+  const { ext, jack, ja, hanging, held, cord, halter, dropped } = M, cowM = ext.cow, scene = ext.scene;
   return new Promise(resolve => {
-    const keys = {}, prints = [], tu = root.TouchUI.create({ keys, run: true, sneak: true, jump: true, act: true, drop: true, cam: true }), st = { y: 0, vy: 0, grounded: true, wet: 0, stride: 0, foot: 1, boost: 0, climb: null, jumpReq: false, leadDropped: false, pos: v(DOOR.x, 0, DOOR.z + 30), heading: Math.PI, speedN: 0, sneak: false, yaw: -Math.PI / 2, pitch: 0.5, zoom: 1, hasLead: false, stick: tu.stick, hint: '', toastAt: 0, startled: 0, shownTip: false, attached: false };
+    const keys = {}, prints = [], tu = root.TouchUI.create({ keys, run: true, sneak: true, jump: true, act: true, drop: true, cam: true }), st = { y: 0, vy: 0, grounded: true, wet: 0, stride: 0, foot: 1, boost: 0, climb: null, jumpReq: false, leadDropped: false, pos: v(DOOR.x, 0, DOOR.z + 30), heading: Math.PI, speedN: 0, sneak: false, yaw: -Math.PI / 2, pitch: 0.5, zoom: 1, hasLead: false, stick: tu.stick, startled: 0, shownTip: false, attached: false };
     const cow = { pos: v(186, 0, 24), target: v(186, 0, 24), mode: 'graze', timer: 2, trust: 90, cool: 0, heading: -2.2, t: 0, flee: 0 };
     jack.root.position.copy(st.pos); st.heading = Math.PI;
     const camPos = new V3(), look = new V3(), spec = { pos: camPos, look, fov: 48 };
@@ -146,10 +146,10 @@ function playLoop(G, W, M) {
     function cycleZoom(dir) { st.zoom = (st.zoom + (dir || 1) + ZOOMS.length) % ZOOMS.length; camIcon(); }
     function setSneak(on) { st.sneak = on; tu.setSneak(on); if (on && tu.run) tu.setRun(false); toast(on ? 'Sneaking: slow and quiet.' : 'Walking.'); }              // (the C key and the on-screen Sneak button share this)
     function toggleSneak() { setSneak(!st.sneak); }
-    ui.tu = tu; camIcon();
+    camIcon();
     tu.on.cam = () => cycleZoom(); tu.on.jump = () => { st.jumpReq = true; }; tu.on.act = () => interact(); tu.on.drop = () => take(); tu.on.sneak = on => { st.sneak = on; toast(on ? 'Sneaking: slow and quiet.' : 'Walking.'); };
     const findBar = () => OBJECTS.find(o => o.climb && st.y < o.top - 1 && inBox(o, st.pos.x, st.pos.z, 9) && Math.cos(st.heading) * ((o.z0 + o.z1) / 2 - st.pos.z) + Math.sin(st.heading) * ((o.x0 + o.x1) / 2 - st.pos.x) > 0);   // (the barrel Jack is beside and facing)
-    const toast = (t, ms = 3200) => { ui.toast.textContent = root.Tips.clean(t); ui.toast.style.opacity = 1; st.toastAt = performance.now() + ms; };
+    const toast = (t, ms = 3200) => G.hud.toast(t, ms);
     const near = (p, r) => Math.hypot(st.pos.x - p.x, st.pos.z - p.z) < r;
 
     function take() {                                                                                   // Q: take the lead (off its hook, or from where it was dropped), or put it down
@@ -173,10 +173,10 @@ function playLoop(G, W, M) {
     }
     function attach() {
       st.attached = true; held.visible = false; halter.visible = true; cord.visible = true; ja.lead = true; A && A.moo(0.5, 0.9);
-      cow.mode = 'calm'; ui.show(false); cleanup();
+      cow.mode = 'calm'; cleanup();
       resolve({ startles: st.startled, trust: cow.trust });
     }
-    function cleanup() { tu.destroy(); ui.tu = null; root.removeEventListener('keydown', kd); root.removeEventListener('keyup', ku); el.removeEventListener('pointerdown', pd); el.removeEventListener('pointermove', pm); el.removeEventListener('pointerup', pu); el.removeEventListener('pointercancel', pu); el.removeEventListener('wheel', wheel); G.updaters = G.updaters.filter(u => u !== tick); for (const p of prints) scene.remove(p.m); prints.length = 0; M.state = { pos: st.pos.clone(), heading: st.heading, cow }; }
+    function cleanup() { tu.destroy(); G.hud.reset(); root.removeEventListener('keydown', kd); root.removeEventListener('keyup', ku); el.removeEventListener('pointerdown', pd); el.removeEventListener('pointermove', pm); el.removeEventListener('pointerup', pu); el.removeEventListener('pointercancel', pu); el.removeEventListener('wheel', wheel); G.updaters = G.updaters.filter(u => u !== tick); for (const p of prints) scene.remove(p.m); prints.length = 0; M.state = { pos: st.pos.clone(), heading: st.heading, cow }; }
 
     const scold = () => { const lines = ['Where do you think you’re going, Jack? You can’t go to market without Milky-White.', 'Idiot. Mother said to take the cow. Go and get the cow.', 'Not without the cow, Jack. Think!']; const t = lines[st.scolds++ % lines.length]; toast('Jack: “' + t + '”', 4200); A && A.speak('jack', t, 3, {}); st.scoldAt = performance.now() + 7000; };
     const inBox = (o, x, z, m) => x > o.x0 - m && x < o.x1 + m && z > o.z0 - m && z < o.z1 + m;
@@ -193,7 +193,7 @@ function playLoop(G, W, M) {
         const off = Math.abs(turn(st.heading, want, 1) - st.heading), ease = clamp(1 - off / Math.PI * 0.8, 0.2, 1), sp = keys.run ? RUN : st.sneak ? CREEP : WALK;
         vel.set(Math.sin(st.heading), 0, Math.cos(st.heading)).multiplyScalar(sp * SC * ease);
       }
-      // Jump (Space), or, beside the barrel, climb it: a jump rises about 15 units, so the feed and the trough can be landed on, but only the barrel (18) needs a climb.
+      // Jump, or, beside the barrel, climb it: a jump rises about 15 units, so the feed and the trough can be landed on, but only the barrel (18) needs a climb.
       st.boost = Math.max(0, st.boost - dt);
       if (st.jumpReq) {
         st.jumpReq = false;
@@ -238,7 +238,7 @@ function playLoop(G, W, M) {
           cow.mode = 'flee'; cow.flee = 2.6; cow.cool = 1.4; cow.trust = Math.max(0, cow.trust - 14); st.startled++; A && A.moo(0.55, 0.8);
           const away = cow.pos.clone().sub(st.pos); away.y = 0; if (away.lengthSq() < 0.01) away.set(1, 0, 0); away.normalize(); cow.target = cow.pos.clone().addScaledVector(away, 40);
           cow.target.x = clamp(cow.target.x, COWB.x0, COWB.x1); cow.target.z = clamp(cow.target.z, COWB.z0, COWB.z1);
-          if (!st.shownTip) { st.shownTip = true; toast('You startled her. Quick movement frightens animals: sneak (C) when you are near her, and give her time.', 6000); }
+          if (!st.shownTip) { st.shownTip = true; toast('You startled her. Quick movement frightens animals: sneak when you are near her, and give her time.', 6000); }
         }
         if (gap < 18 && st.speedN < CALM && cow.mode !== 'flee') cow.trust = Math.min(100, cow.trust + (st.speedN < 1 ? 7 : 4) * dt);
         if (cow.mode === 'flee') { cow.flee -= dt; const dd = cow.target.distanceTo(cow.pos); if (cow.flee <= 0 || dd < 1) { cow.mode = 'graze'; cow.timer = 2; cow.target = cow.pos.clone(); } else cow.pos.addScaledVector(cow.target.clone().sub(cow.pos).normalize(), Math.min(dd, 22 * dt)); }
@@ -254,13 +254,11 @@ function playLoop(G, W, M) {
       const goal = camGoal(); camPos.lerp(goal, Math.min(1, dt * 8)); look.set(st.pos.x, st.y + 15 * SC, st.pos.z); G.cut(spec);
       // HUD.
       const near_ = d < 90 || st.hasLead, pace = st.speedN < 0.5 ? 'Still' : st.speedN > ALARM + 14 ? 'Running' : st.sneak ? 'Sneaking' : 'Walking';
-      ui.obj.textContent = root.Tips.clean(!st.hasLead ? 'Fetch the cow’s lead from the cowshed.' : cow.trust >= 99.5 ? 'Put the lead on Milky-White (E).' : 'Win Milky-White’s trust, gently: sneak (C) up and wait beside her.');
-      ui.trustWrap.style.display = near_ ? 'block' : 'none'; ui.trustBar.style.width = cow.trust + '%'; ui.trustVal.textContent = Math.round(cow.trust) + '%'; ui.trustBar.classList.toggle('full', cow.trust >= 99.5);
-      ui.pace.textContent = pace + (st.speedN > ALARM && d < 44 && cow.mode !== 'calm' ? ' — too fast near her!' : ''); ui.pace.classList.toggle('warn', st.speedN > ALARM && d < 44);
-      const h = !st.hasLead && (hanging.visible && near(LEADSPOT, 20) || st.leadDropped && Math.hypot(st.pos.x - dropped.position.x, st.pos.z - dropped.position.z) < 18) ? 'Q: take the lead' : st.hasLead && gap < 16 ? (cow.trust >= 99.5 ? 'E: put the lead on her' : 'She is still jumpy. Stay slow, stay close.') : '';
-      const h2 = h || (st.hasLead && !st.attached ? (near(LEADSPOT, 24) && st.y < 16 ? 'Q: hang the lead back up' : 'Q: drop the lead') : '');
-      ui.hint.textContent = h2; ui.hint.style.display = h2 ? 'block' : 'none';
-      if (st.toastAt && performance.now() > st.toastAt) { ui.toast.style.opacity = 0; st.toastAt = 0; }
+      const pushed = st.speedN > ALARM && d < 44 && cow.mode !== 'calm';
+      G.hud.objective(!st.hasLead ? 'Fetch the cow’s lead from the cowshed.' : cow.trust >= 99.5 ? 'Put the lead on Milky-White.' : 'Win Milky-White’s trust, gently: sneak up and wait beside her.');
+      G.hud.meter('trust', near_ ? { label: 'Milky-White trusts you', value: cow.trust / 100, text: Math.round(cow.trust) + '%', tone: cow.trust >= 99.5 ? 'full' : '' } : null);
+      G.hud.meter('pace', { label: pace + (pushed ? ' — too fast near her!' : ''), tone: pushed ? 'warn' : '' });
+      { const goal = st.attached ? null : !st.hasLead ? (hanging.visible ? LEADSPOT : st.leadDropped ? dropped.position : null) : cow.pos; G.cue.set('goal', goal ? { x: goal.x, z: goal.z, r: st.hasLead ? 15 : 9 } : null); }       // (what he is after: the lead on its hook, then the cow)
       // The touch buttons say what a tap will do now, and grey out when it would do nothing (the same conditions as the keys above).
       { const bar = !st.climb && st.grounded && findBar(), ground = st.grounded && !st.climb && !st.attached;
         tu.set('jump', bar ? { label: 'Climb', icon: 'climb', enabled: ground } : { label: 'Jump', icon: 'jump', enabled: ground });
@@ -270,13 +268,13 @@ function playLoop(G, W, M) {
     };
     st.scolds = 0; st.scoldAt = 0;
     M.play = { st, cow, interact, toggleSneak, cycleZoom, drop };                                                                       // (for the tests)
-    G.updaters.push(tick); ui.show(true); G.mode = 'play'; document.body.classList.remove('cutscene');
+    G.updaters.push(tick); G.mode = 'explore';
   });
 }
 
 async function closing(G, W, M) {
   const { ext, jack, ja, cord, halter } = M, cowM = ext.cow, cow = M.state.cow, st = M.state;
-  G.mode = 'cutscene'; document.body.classList.add('cutscene'); G.hideLine();
+  G.mode = 'cutscene'; G.hideLine();
   // The rope between his hand and her halter, kept up to date as they stand there.
   const hand = new V3(), neck = new V3(), tmp = new V3();
   const cordUpdate = () => { jack.root.updateMatrixWorld(true); cowM.updateMatrixWorld(true); jack.armR.localToWorld(hand.set(0, -11, 1)); cowM.userData.head.localToWorld(neck.set(0, -1.5, 5)); tmp.copy(neck).sub(hand); const len = tmp.length() || 1; cord.position.copy(hand).add(neck).multiplyScalar(0.5); cord.scale.set(1, 1, len); cord.lookAt(neck); };
@@ -290,22 +288,8 @@ async function closing(G, W, M) {
   await G.say('jack', 'Come on, girl, we’ve got a long walk ahead.', { gate: 'Continue' });
   A && A.stopMusic(2.2); await G.fade(true, 1.8); A && A.ambience({ wind: 0, birds: 0, fire: 0 });
   G.updaters = G.updaters.filter(u => u !== cordUpdate); await G.wait(0.8);
-  G.mode = 'end'; document.body.classList.remove('cutscene'); G.hideLine && G.hideLine();
+  G.mode = 'end'; G.hideLine && G.hideLine();
 }
 
-// ── The HUD (built once): objective, hint, toast, cow trust, pace, (the touch controls are TouchUI's, set up by each scene). ──
-let HUD = null;
-function hud() {
-  if (HUD) return HUD;
-  const mk = (tag, id, cls, parent) => { const e = document.createElement(tag); if (id) e.id = id; if (cls) e.className = cls; (parent || document.body).appendChild(e); return e; };
-  const root_ = mk('div', 'mHud', 'mhud'); root_.style.display = 'none';
-  const obj = mk('div', 'mObj', 'mobj', root_), pace = mk('div', 'mPace', 'mpace', root_), trustWrap = mk('div', 'mTrust', 'mtrust', root_);
-  trustWrap.innerHTML = '<div class="mtl">Milky-White trusts you <b id="mTrustVal">90%</b></div><div class="mtb"><i id="mTrustBar"></i></div>';
-  const hint = mk('div', 'mHint', 'mhint', root_), toast = mk('div', 'mToast', 'mtoast', root_);
-  HUD = { root: root_, obj, pace, trustWrap, trustBar: document.getElementById('mTrustBar'), trustVal: document.getElementById('mTrustVal'), hint, toast, tu: null,
-    show(on) { root_.style.display = on ? 'block' : 'none'; document.body.classList.toggle('playing', on); if (HUD.tu) HUD.tu.show(on); } };   // (the touch controls, TouchUI's, are shown and hidden with the HUD)
-  return HUD;
-}
-
-root.Market = { build, run, ZOOMS, hud, cowHit, cowGap, COWBOX, SC, WALK, CREEP, RUN, ALARM, CALM, GRAV, JUMP_V };
+root.Market = { build, run, ZOOMS, cowHit, cowGap, COWBOX, SC, WALK, CREEP, RUN, ALARM, CALM, GRAV, JUMP_V };
 })(typeof window !== 'undefined' ? window : globalThis);

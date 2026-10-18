@@ -6,7 +6,31 @@ Everything is rendered in the same blocky style (three.js, no build step, proced
 
 ## Status
 
-Built so far, in play order: the **Prologue** (the opening); **Chapter One, "Market Day"** (the cow, the market road and the Peddler's cart, the night scene, the correction in three tones, and planting the beans); and **Chapter Two, "The Climb"** (the waking cutscene, dressing and the knife, and the climb of the beanstalk, to the cloud). Also the character models and wardrobes, the character models and wardrobes, the across-the-lap correction scene, and a test level (the golden hen) that proves the care-and-consequence loop. Next: the beanstalk.
+Built so far, in play order: the **Prologue** (the opening); **Chapter One, "Market Day"** (the cow, the market road and the Peddler's cart, the night scene, the correction in three tones, and planting the beans); **Chapter Two, "The Climb"** (the waking cutscene, dressing and the knife, the climb of the beanstalk, the cloud meadow, and the castle: the kitchen, the hiding, and being found); **Chapter Three, "The Measure of a Man"** (waking in the box, the nursery and the chest, the correction, being dressed, the hen's chores, the bath, bedtime); and **Chapter Four, "The Golden Egg"** (the dream of home and its correction, waking, and breakfast). Also the character models and wardrobes, the across-the-lap correction scene, and a test level (the golden hen) that proves the care-and-consequence loop.
+
+## How the game is played, and how it is put together
+
+The game is played with a thumb: a phone held sideways is the one device it is designed for (held upright, it asks to be turned). A mouse works the on-screen buttons as a finger does, and the keyboard still answers (WASD, E, Q, Space, C, V), but nothing on the screen names a key.
+
+**Three kinds of moment, and the screen says which** (`G.mode`, set by `G.setMode(mode, cfg)` in `js/game.js`; the page's CSS and the touch controls key off `body[data-mode]`, and nothing else touches the mode classes):
+
+| Mode | What it is | What is on the screen |
+|---|---|---|
+| `cutscene` | The story tells itself: directed cameras, nothing to control | A tap moves a line on; **Skip** (this scene only) and **Menu** |
+| `beat` | A playable beat inside a directed scene: dressing, bathing, eating, a gate that waits for an answer | One big **Context** button (gold and breathing when the scene is waiting for it, a ring filling while the answer is not yet ready), an **Alt** beside it when there is a second answer; Skip; the camera button if the camera is the player's |
+| `explore` | Free play: the stick, the camera, the world | The stick, **Jump / Climb**, **Context**, **Alt** (put down, pick up), Run, Sneak and the camera button, as the scene asks for them; an objective line |
+
+(`title`, `notice`, `end` are menus; `correction` is the lap scenes, with their own camera and Red buttons; `free` is the scene-notes page.)
+
+**One HUD** (`G.hud`): the objective (one standing line, or a checklist), a passing toast, and meters (trust, stamina), stacked top left inside the safe edge, drawn in `explore` and `beat` only. **One set of world cues** (`G.cue`): a soft gold ring on the ground where something matters now, with a column of light over it when it is far off. A scene says what it points at; none draws its own HUD, prompt or hint.
+
+**One touch UI** (`js/touchui.js`): the stick on the left, the Context button (the verb of what a tap will do now) in the right thumb's own place; a button a scene does not use is not drawn, and one that would do nothing is greyed. The `explore` layout is the same in every scene.
+
+**Rules kept by the tests** (`tests/presentation.test.js`): no scene writes a key name into text the player sees; scenes name only the modes the shell knows and never set the mode classes; no scene builds its own objective, toast or hint element.
+
+**Skipping.** Skip ends the scene it is pressed in and lands at the start of the next thing the player has to do (a walk, a beat): a skipped wait ends at once, and every 256th gives the frame loop a turn, so that a scene that waits on the player can never freeze the page.
+
+**Characters.** One rig builder (`js/blocky.js`: `makeJack`, `makeGerda`, and `js/cast.js` for the rest of the cast); the cast's sizes are set once in `Blocky.SCALE`. Each frame the rig returns to its standard pose before a scene's own hook (`rig.after`) adds to it (`Blocky.hook(rig, fn)` installs a hook and gives back the undoing), so nothing a scene bent stays bent once the scene stops asking for it.
 
 ### Prologue: the opening (`game.html`)
 

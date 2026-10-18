@@ -19,8 +19,28 @@ function create(els) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.outputEncoding = THREE.sRGBEncoding; renderer.setPixelRatio(Math.min(2, root.devicePixelRatio || 1)); els.stage.appendChild(renderer.domElement);
   const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 4000);
-  const G = { renderer, camera, scene: null, t: 0, skipping: false, settings: Object.assign({ speed: 1, auto: true, subtitles: true }, store.get(SET_KEY, {})), mode: 'notice', shots: {}, updaters: [], drone: null, maxDt: 0.05 };
+  const G = { renderer, camera, scene: null, t: 0, skipping: false, settings: Object.assign({ speed: 1, auto: true, subtitles: true }, store.get(SET_KEY, {})), shots: {}, updaters: [], drone: null, maxDt: 0.05 };
   const cam = { pos: new V3(), look: new V3(), fov: 50 }, move = { active: null };
+
+  // ── Modes: what the player is doing, and so what is on the screen. This is the one place that says so: a scene names its mode (G.mode = 'beat', or G.setMode('beat', { skip: true })) and the page's CSS,
+  // keyed on body[data-mode], puts up the right buttons. Nothing else touches the body's mode classes.
+  //   title / notice / end   a menu over the world
+  //   cutscene               nothing to control: a tap moves the line on; Skip and Menu are up
+  //   beat                   a playable beat inside a directed scene: the one Context button answers what is asked (and an Alt beside it); no stick, no jump; the camera is the scene's
+  //   explore                free play: the stick, the camera, the buttons, an objective  (cfg.fixedCam: the scene holds the camera, so there is no camera button)
+  //   correction             the lap scenes: their own camera button and Red
+  //   free                   the scene-notes page: no chrome at all
+  // 'play', 'garden' and 'cine' are older names, kept so that a scene written with them still lands in the right mode.
+  const MODE_NAME = { play: 'explore', garden: 'explore', cine: 'cutscene' }, MODES = ['title', 'notice', 'end', 'cutscene', 'beat', 'explore', 'correction', 'free'];
+  let mode = 'notice';
+  G.setMode = (m, cfg) => {
+    m = MODE_NAME[m] || m; if (MODES.indexOf(m) < 0) throw new Error('Unknown mode: ' + m);
+    cfg = cfg || {}; mode = m; const b = document.body;
+    b.dataset.mode = m; b.classList.toggle('cutscene', m === 'cutscene'); b.classList.toggle('skippable', m === 'cutscene' || !!cfg.skip); b.classList.toggle('fixedcam', !!cfg.fixedCam);
+    return m;
+  };
+  Object.defineProperty(G, 'mode', { get: () => mode, set: m => { G.setMode(m); }, enumerable: true });
+  G.setMode('notice');
 
   function resize() { const w = els.stage.clientWidth || root.innerWidth, h = els.stage.clientHeight || root.innerHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
   root.addEventListener('resize', resize); resize();
@@ -35,9 +55,75 @@ function create(els) {
   });
   G.shotNow = () => ({ pos: cam.pos.clone(), look: cam.look.clone(), fov: cam.fov });
 
+  // ── The HUD: what the screen says about the play, in one place and one look. Top left, in a stack inside the safe edge: the objective (the one standing line), a passing toast, and any meters (trust, stamina).
+  // It is drawn in explore and beat modes only, so none of it lingers into a cutscene. A scene calls G.hud.objective(text) / toast(text, ms) / meter(id, { label, value 0..1, text, tone, mark }) / reset(); none draws its own. ──
+  {
+    const st = document.createElement('style');
+    st.textContent = `#hud { position: fixed; left: calc(var(--sl, 0px) + 12px); top: calc(var(--st, 0px) + 10px); z-index: 12; display: none; flex-direction: column; align-items: flex-start; gap: 6px; max-width: calc(100vw - var(--sl, 0px) - var(--sr, 0px) - 112px); pointer-events: none; font-family: Georgia, serif; color: #ece8df; }
+      body[data-mode="explore"] #hud, body[data-mode="beat"] #hud { display: flex; }
+      #hud .hObj .done { opacity: .5; text-decoration: line-through; }
+      #hud .hObj, #hud .hToast, #hud .hMeter { background: rgba(10,12,16,0.78); border: 1px solid #4a4d58; border-radius: 8px; line-height: 1.3; } #hud .hObj { padding: 7px 14px; font-size: clamp(13px, 1.9vw, 16px); }
+      #hud .hToast { padding: 6px 12px; font-size: 14px; background: rgba(10,12,16,0.88); opacity: 0; transition: opacity .4s; } #hud .hMeters { display: flex; flex-direction: column; gap: 6px; }
+      #hud .hMeter { width: min(230px, 42vw); padding: 5px 10px 6px; font-size: 13px; } #hud .hMeter .hl { display: flex; justify-content: space-between; gap: 8px; } #hud .hMeter.warn .hl { color: #f0a090; }
+      #hud .hMeter .bar { position: relative; height: 9px; background: #1c1f27; border: 1px solid #454a58; border-radius: 4px; overflow: hidden; margin-top: 4px; } #hud .hMeter .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #5a8a4a, #c9a84c); }
+      #hud .hMeter.full .bar i { background: #7fd070; } #hud .hMeter.low .bar i { background: #c0503a; } #hud .hMeter .bar b { position: absolute; top: 0; bottom: 0; width: 2px; background: #f0b0a0; opacity: .9; }`;
+    document.head.appendChild(st);
+    const el = document.createElement('div'); el.id = 'hud'; el.innerHTML = '<div class="hObj" style="display:none"></div><div class="hToast"></div><div class="hMeters"></div>'; document.body.appendChild(el);
+    const hObj = el.children[0], hToast = el.children[1], hMeters = el.children[2], meters = {}; let toastT = 0;
+    const clean = t => root.Tips && root.Tips.clean ? root.Tips.clean(t) : t;
+    G.hud = {
+      objective(t) {                                                       // a line, or a list of { text, done } (those done are struck through)
+        if (Array.isArray(t)) { const k = JSON.stringify(t); if (hObj.dataset.k !== k) { hObj.dataset.k = k; hObj.textContent = ''; t.forEach((it, i) => { if (i) hObj.appendChild(document.createTextNode('  ·  ')); const sp = document.createElement('span'); sp.textContent = clean(it.text); if (it.done) sp.className = 'done'; hObj.appendChild(sp); }); } hObj.style.display = 'block'; return; }
+        hObj.dataset.k = ''; t = t ? clean(t) : ''; if (hObj.textContent !== t) hObj.textContent = t; hObj.style.display = t ? 'block' : 'none'; if (!t && G.cue) G.cue.set('goal', null); },       // (what the world points at as the goal goes with the line that names it)
+      toast(t, ms = 3200) { hToast.textContent = clean(t); hToast.style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => { hToast.style.opacity = 0; }, ms); },
+      meter(id, o) {
+        let m = meters[id];
+        if (!o) { if (m) { m.el.remove(); delete meters[id]; } return; }
+        if (!m) { const e = document.createElement('div'); e.className = 'hMeter'; e.innerHTML = '<div class="hl"><span></span><b></b></div><div class="bar"><i></i></div>'; hMeters.appendChild(e); m = meters[id] = { el: e, n: e.querySelector('span'), v: e.querySelector('b'), bar: e.querySelector('.bar'), i: e.querySelector('i'), mark: null, last: {} }; }
+        const L = m.last, set = (k, v, f) => { if (L[k] !== v) { L[k] = v; f(v); } };
+        set('label', o.label || '', v => { m.n.textContent = v; }); set('text', o.text || '', v => { m.v.textContent = v; });
+        set('bar', o.value == null ? -1 : Math.round(o.value * 200) / 200, v => { m.bar.style.display = v < 0 ? 'none' : 'block'; if (v >= 0) m.i.style.width = (v * 100) + '%'; });
+        set('tone', o.tone || '', v => { for (const c of ['warn', 'full', 'low']) m.el.classList.toggle(c, c === v); });
+        set('mark', o.mark == null ? -1 : o.mark, v => { if (m.mark) { m.mark.remove(); m.mark = null; } if (v >= 0) { m.mark = document.createElement('b'); m.mark.style.left = (v * 100) + '%'; m.bar.appendChild(m.mark); } });
+      },
+      reset() { this.objective(''); hToast.style.opacity = 0; clearTimeout(toastT); for (const k in meters) this.meter(k, null); if (G.cue) G.cue.clear(); },
+    };
+  }
+
+  // ── Cues: what the world itself points at. A soft gold ring on the ground where something matters now (the objective, or what the Context button would act on), breathing slowly, and, when it is far off, a faint
+  // column of light over it, so that it can be found. G.cue.set(id, { x, z, y, r } | null): a scene names its cues as they change; they are drawn in explore and beat modes only, and a scene's end clears them. ──
+  {
+    const cues = {}, grp = new THREE.Group(), ringGeo = new THREE.RingGeometry(0.74, 1, 48).rotateX(-Math.PI / 2), pilGeo = new THREE.CylinderGeometry(0.2, 0.2, 1, 14, 1, true).translate(0, 0.5, 0);
+    const ringMat = () => new THREE.MeshBasicMaterial({ color: 0xf0d98a, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const pilMat = () => new THREE.MeshBasicMaterial({ color: 0xf0d98a, transparent: true, opacity: 0.13, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    G.cue = {
+      set(id, o) {
+        let c = cues[id];
+        if (!o) { if (c) c.o = null; return; }
+        if (!c) { const g = new THREE.Group(), ring = new THREE.Mesh(ringGeo, ringMat()), pil = new THREE.Mesh(pilGeo, pilMat()); g.add(ring, pil); c = cues[id] = { g, ring, pil, o: null }; grp.add(g); }
+        c.o = o;
+      },
+      clear() { for (const id in cues) cues[id].o = null; },
+      get(id) { const c = cues[id]; return c && c.o; },       // (what a cue is pointing at now: for tools and tests)
+    };
+    const u = (dt, t) => {
+      const on = mode === 'explore' || mode === 'beat';
+      if (grp.parent !== G.scene) { if (grp.parent) grp.parent.remove(grp); if (G.scene) G.scene.add(grp); }
+      grp.visible = on; if (!on) return;
+      for (const id in cues) {
+        const c = cues[id], o = c.o; c.g.visible = !!o; if (!o) continue;
+        const r = o.r || 10, k = 1 + 0.07 * Math.sin(t * 2.4);
+        c.g.position.set(o.x, (o.y || 0) + 0.04 * r + 0.3, o.z); c.ring.scale.setScalar(r * k); c.ring.material.opacity = 0.38 + 0.17 * Math.sin(t * 2.4);
+        const far = camera.position.distanceTo(c.g.position) > r * 9; c.pil.visible = far; if (far) c.pil.scale.set(r * 0.9, r * 8, r * 0.9);
+      }
+    };
+    u.keep = true; G.updaters.push(u);
+  }
+
   // ── Timing. ──
   const waiters = [];
-  G.wait = secs => new Promise(res => { if (G.skipping) { res(); return; } waiters.push({ t: secs, res }); });
+  let skipSpin = 0;       // (a skipped wait ends at once; but a scene that loops on something outside itself must never starve the page: every 256th skipped wait gives the frame loop a turn)
+  G.wait = secs => new Promise(res => { if (G.skipping) { if ((++skipSpin & 255) === 0) setTimeout(res, 0); else res(); return; } skipSpin = 0; waiters.push({ t: secs, res }); });
   const fadeEl = els.fade;
   G.fade = (toBlack, secs = 1) => G.noFade ? G.wait(secs) : new Promise(res => {
     if (G.skipping) { fadeEl.style.transition = 'none'; fadeEl.style.opacity = toBlack ? 1 : 0; res(); return; }
@@ -47,11 +133,13 @@ function create(els) {
   // ── Dialogue: a subtitle box that types its line out (the voice babbles for the same length). A tap or key press finishes typing, then moves on. ──
   const subs = els.subs, subWho = els.subWho, subText = els.subText;
   let advance = null;
+  const setAdvance = f => { advance = f; subs.classList.toggle('pending', !!f); };       // (a line that waits for a tap: the box takes the tap, in whatever mode, so a beat's line can never be left standing)
   const tap = () => { if (advance) advance(); };
+  G.tap = tap;       // (so that a button of the scene's own, Red above all, can end a line that is waiting)
   const typing_ = e => e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable);   // (keys typed into a field are not the story's)
-  root.addEventListener('keydown', e => { if (G.manual || typing_(e)) return; if (e.key === ' ' || e.key === 'Enter') { if (G.mode === 'cutscene') { e.preventDefault(); tap(); } } });
-  els.stage.addEventListener('pointerdown', () => { if (G.mode === 'cutscene' && !G.manual) tap(); });
-  subs.addEventListener('pointerdown', e => { e.stopPropagation(); if (G.mode === 'cutscene') tap(); });
+  root.addEventListener('keydown', e => { if (G.manual || typing_(e)) return; if (e.key === 'Enter' || (e.key === ' ' && G.mode !== 'explore')) { if (advance || G.mode === 'cutscene') { e.preventDefault(); tap(); } } });
+  els.stage.addEventListener('pointerdown', () => { if (G.mode === 'cutscene' && !G.manual) tap(); });       // (a cutscene has nothing else to touch; elsewhere the screen is the camera's, and only the line itself is tapped)
+  subs.addEventListener('pointerdown', e => { e.stopPropagation(); if (!G.manual) tap(); });
   const WHO = { mother: ['Mother', '#e6b8a0'], jack: ['Jack', '#a8d8a0'], gerda: ['Gerda', '#e6a0c0'], peddler: ['Peddler', '#c8c090'], merchant: ['Merchant', '#a0c8f0'], narrator: ['', '#e6c46a'] };
   const whoOf = who => { const w = WHO[who] || [who, '#e6c46a']; return who === 'gerda' && !G.gerdaNamed ? ['The Giantess', w[1]] : w; };       // (Jack does not know her name until she gives it)
   let capTok = 0; const caps = new Set(), supersede = () => { subs.classList.remove('thought'); capTok++; for (const f of [...caps]) f(); }, live = { say: 0 };      // (a spoken line ends any caption still up, and no caption is drawn over a line while it is up: the two used to overwrite, and hide, each other)
@@ -63,7 +151,7 @@ function create(els) {
     const th = !!(opts && opts.thought), w = whoOf(who); subs.classList.toggle('thought', th); subWho.textContent = th ? w[0] + ' · thinking' : w[0]; subWho.style.color = th ? '#9fb4e8' : w[1]; subs.style.display = 'block'; subText.textContent = '';       // (a thought: not said; its own look, no voice, and no one in the scene hears it)
     const cps = 34 * G.settings.speed, typeSecs = Math.max(0.6, text.length / cps), voice = Audio_ && who !== 'narrator' && !th ? Audio_.speak(who, text, typeSecs, { muffle: opts && opts.muffle }) : null;
     const t0 = G.t; let typed = false, holdAt = null, poll = null, typing = null; const gateBtn = document.getElementById('subGate');
-    let closed = false; const close = () => { if (!closed) { closed = true; live.say = Math.max(0, live.say - 1); } clearInterval(typing); clearInterval(poll); if (voice) voice.stop(); if (ep !== G.epoch) return; advance = null; if (gateBtn) gateBtn.style.display = 'none'; if (!G.keepLine) subs.style.display = 'none'; resolve(); };
+    let closed = false; const close = () => { if (!closed) { closed = true; live.say = Math.max(0, live.say - 1); } clearInterval(typing); clearInterval(poll); if (voice) voice.stop(); if (ep !== G.epoch) return; setAdvance(null); if (gateBtn) gateBtn.style.display = 'none'; if (!G.keepLine) subs.style.display = 'none'; resolve(); };
     const gateLabel = opts && opts.gate;
     const finish = () => {
       if (typed) return; typed = true; clearInterval(typing); subText.textContent = text;
@@ -71,7 +159,7 @@ function create(els) {
       else if (G.settings.auto) holdAt = G.t + Math.max(1100, text.length * 48 / G.settings.speed) / 1000;
     };
     typing = setInterval(() => { const n = Math.min(text.length, Math.floor((G.t - t0) * cps)); subText.textContent = text.slice(0, n); if (n >= text.length) finish(); }, 30);
-    advance = () => { if (!typed) { finish(); if (voice) voice.stop(); } else if (!gateLabel) close(); };            // a tap finishes the typing, the next one moves on
+    setAdvance(() => { if (!typed) { finish(); if (voice) voice.stop(); } else if (!gateLabel) close(); });            // a tap finishes the typing, the next one moves on
     poll = setInterval(() => { if (G.skipping || (G.seekTo != null && typed) || (holdAt != null && G.t >= holdAt) || ep !== G.epoch) close(); }, 60);
   });
   // A caption: a line spoken over the scene while it goes on (nothing waits for it, though the promise resolves when it has had its time). The next caption replaces it.
@@ -92,15 +180,15 @@ function create(els) {
   G.captionOff = () => { subs.classList.remove('thought'); capTok++; for (const f of [...caps]) f(); subs.style.display = 'none'; };
   // A choice for the player: buttons inside the dialogue box (or the keys 1 to 9); resolves with the index picked.
   G.choose = (who, options) => new Promise(resolve => {
-    const w = whoOf(who), box = document.getElementById('subChoices'); subWho.textContent = w[0]; subWho.style.color = w[1]; subText.textContent = ''; subs.style.display = 'block'; box.innerHTML = ''; box.style.display = 'block'; advance = null;
+    const w = whoOf(who), box = document.getElementById('subChoices'); subWho.textContent = w[0]; subWho.style.color = w[1]; subText.textContent = ''; subs.style.display = 'block'; box.innerHTML = ''; box.style.display = 'block'; setAdvance(null);
     const pick = i => { clearInterval(poll); root.removeEventListener('keydown', onKey, true); box.style.display = 'none'; box.innerHTML = ''; subs.style.display = 'none'; resolve(i); };
     const onKey = e => { const n = parseInt(e.key, 10); if (n >= 1 && n <= options.length) { e.preventDefault(); e.stopPropagation(); pick(n - 1); } };
-    options.forEach((o, i) => { const b = document.createElement('button'); b.className = 'choice'; b.textContent = (i + 1) + '. ' + (typeof o === 'string' ? o : '(' + o.act + ')'); if (typeof o !== 'string') b.style.fontStyle = 'italic'; b.onclick = e => { e.stopPropagation(); pick(i); }; box.appendChild(b); });
+    options.forEach((o, i) => { const b = document.createElement('button'); b.className = 'choice'; b.textContent = typeof o === 'string' ? o : '(' + o.act + ')'; if (typeof o !== 'string') b.style.fontStyle = 'italic'; b.onclick = e => { e.stopPropagation(); pick(i); }; box.appendChild(b); });
     root.addEventListener('keydown', onKey, true);
     const poll = setInterval(() => { if (G.skipping) { clearInterval(poll); pick(0); } }, 80);
     if (G.skipping) pick(0);
   });
-  G.hideLine = () => { subs.style.display = 'none'; advance = null; };
+  G.hideLine = () => { subs.style.display = 'none'; setAdvance(null); };
 
   // ── The frame loop. ──
   let last = performance.now();

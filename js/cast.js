@@ -10,7 +10,7 @@
 'use strict';
 const THREE = root.THREE, B = root.Blocky;
 const { Skin, buildCharacter, SIDES, sideOuter } = B;
-const ADULT = 0.95, GERDA = 1.0;
+const ADULT = B.SCALE.adult, GERDA = B.SCALE.gerda;
 
 // A box whose every face shows a repeating 16x16 pixel texture at one skin pixel per unit, so cloth on a cloak matches the cloth on the skins.
 function clothTexture(draw) {

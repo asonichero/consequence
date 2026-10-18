@@ -9,7 +9,7 @@
 'use strict';
 const THREE = root.THREE, B = root.Blocky, Lap = root.Lap, A = root.GameAudio, V3 = THREE.Vector3;
 const v = (x, y, z) => new V3(x, y, z);
-const SC = 0.95, STAGE_Y = 5.7;
+const SC = B.SCALE.adult, STAGE_Y = B.SCALE.stageY;
 const RED = { red: true };
 
 // ── The interface: camera switcher and the stop sign, top right. ──
@@ -20,13 +20,20 @@ function ui() {
     #corrUI.on { display: flex; }
     #corrCam { width: 74px; height: 74px; margin: 0; padding: 0; border-radius: 50%; border: 3px solid #fff; background: rgba(20,22,30,0.88); cursor: pointer; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 2px 6px #000); }
     #corrCam:hover { background: rgba(60,66,90,0.95); } #corrCam svg { width: 40px; height: 40px; fill: none; stroke: #fff; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-    #corrRed { position: relative; width: 74px; height: 74px; margin: 0; padding: 0; border: 0; background: #fff; cursor: pointer; clip-path: polygon(29% 0, 71% 0, 100% 29%, 100% 71%, 71% 100%, 29% 100%, 0 71%, 0 29%); filter: drop-shadow(0 2px 6px #000); }
-    #corrRed::before { content: ''; position: absolute; inset: 4px; background: #c4141c; clip-path: polygon(29% 0, 71% 0, 100% 29%, 100% 71%, 71% 100%, 29% 100%, 0 71%, 0 29%); }
-    #corrRed span { position: relative; color: #fff; font: bold 19px Georgia, serif; letter-spacing: .06em; } #corrRed:hover::before { background: #e01c26; }`;
+    #corrRed, .redStop { position: relative; width: 74px; height: 74px; margin: 0; padding: 0; border: 0; background: #fff; cursor: pointer; clip-path: polygon(29% 0, 71% 0, 100% 29%, 100% 71%, 71% 100%, 29% 100%, 0 71%, 0 29%); filter: drop-shadow(0 2px 6px #000); }
+    #corrRed::before, .redStop::before { content: ''; position: absolute; inset: 4px; background: #c4141c; clip-path: polygon(29% 0, 71% 0, 100% 29%, 100% 71%, 71% 100%, 29% 100%, 0 71%, 0 29%); }
+    #corrRed span, .redStop span { position: relative; color: #fff; font: bold 19px Georgia, serif; letter-spacing: .06em; } #corrRed:hover::before, .redStop:hover::before { background: #e01c26; }
+    .redStop { position: fixed; right: calc(var(--sr, 0px) + 92px); top: calc(var(--st, 0px) + 10px); z-index: 44; } @media (max-height: 420px) { #corrRed, .redStop, #corrCam { width: 60px; height: 60px; } #corrCam svg { width: 32px; height: 32px; } #corrUI { right: 72px; top: 6px; gap: 8px; } .redStop { top: calc(var(--st, 0px) + 6px); right: calc(var(--sr, 0px) + 72px); } }`;
   document.head.appendChild(st);
   const d = document.createElement('div'); d.id = 'corrUI';
   d.innerHTML = '<button id="corrCam" title="Change the camera angle"><svg viewBox="0 0 24 24"><path d="M3 8h4l1.6-2.4h6.8L17 8h4v11H3z"/><circle cx="12" cy="13.2" r="3.6"/></svg></button><button id="corrRed" title="Red: stop now"><span>RED</span></button>';
   document.body.appendChild(d); return d;
+}
+
+// The safe word on its own, for a correction that is part of a longer scene (a smack in the bath, in the kitchen): the stop sign, top right beside the Menu. Returns the button; `remove()` takes it away.
+function redOnly(onRed) {
+  ui(); const b = document.createElement('button'); b.className = 'redStop'; b.title = 'Red: stop now'; b.innerHTML = '<span>RED</span>';
+  b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); b.disabled = true; onRed(); }); document.body.appendChild(b); return b;
 }
 
 // ── The player's camera: orbit, pan and zoom; the switcher puts it at a named view. ──
@@ -66,7 +73,7 @@ async function run(G, W, tier, opts) {
   G.lap = lap;      // (for tools and tests)
   const placeStage = at => { lap.stage.position.set(at.x, STAGE_Y, at.z); lap.stage.rotation.y = at.ry; lap.stage.updateMatrixWorld(true); };
   const cworld = { scene, update(dt, t) { int.update(dt, t); ja.t += dt; ma.t += dt; B.step(jackIn, dt); B.step(mother, dt); if (lap.stage.visible) lap.update(dt); } };
-  G.setScene(cworld); G.drone = null; G.mode = 'correction'; document.body.classList.remove('cutscene');
+  G.setScene(cworld); G.drone = null; G.mode = 'correction';
   A && A.ambience({ wind: 0.1, birds: 0, fire: 0.8 });
 
   const cam = freeCam(G, { x0: -75, x1: 75, z0: -75, z1: 75, h: 62 }), panel = ui(), camBtn = document.getElementById('corrCam'), redBtn = document.getElementById('corrRed');
@@ -237,5 +244,5 @@ async function run(G, W, tier, opts) {
   return { tier, hits: lap.st.hits };
 }
 
-root.Correction = { run, freeCam, ui };
+root.Correction = { run, freeCam, ui, redOnly };
 })(typeof window !== 'undefined' ? window : globalThis);

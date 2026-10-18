@@ -6,8 +6,8 @@ const G = root.Game.create({ stage: $('stage'), fade: $('fade'), subs: $('subs')
 root.__game = G;
 let W = G.worlds = root.Opening.build(G); W.market = root.Market.build(G, W);
 const rebuildWorlds = () => { W = G.worlds = root.Opening.build(G); W.market = root.Market.build(G, W); };
-const show = id => document.querySelectorAll('.screen').forEach(s => { if (s.id === id) s.classList.add('on'); else if (s.id !== 'dev') s.classList.remove('on'); });
-const hideAll = () => { document.body.classList.remove('titlePic'); document.querySelectorAll('.screen').forEach(s => { if (s.id !== 'dev') s.classList.remove('on'); }); };
+const show = id => { document.body.classList.toggle('onTitle', id === 'title'); document.querySelectorAll('.screen').forEach(s => { if (s.id === id) s.classList.add('on'); else if (s.id !== 'dev') s.classList.remove('on'); }); };
+const hideAll = () => { document.body.classList.remove('titlePic', 'onTitle'); document.querySelectorAll('.screen').forEach(s => { if (s.id !== 'dev') s.classList.remove('on'); }); };
 $('dev').style.display = 'block';
 
 // The drone view is behind everything, from the first frame.
@@ -16,7 +16,7 @@ G.setScene(W.ext); G.drone = root.Opening.DRONE; G.mode = 'title';
 const snap = (world, drone) => G.snapshotFarm(world, drone || root.Opening.DRONE);
 const STALK_VIEW = () => root.Chapter3.STALK_VIEW();
 const toTitle = () => {
-  G.mode = 'title'; G.setScene(W.ext); G.drone = root.Opening.DRONE; G.skipping = false; G.hideLine(); document.body.classList.remove('cutscene');
+  G.mode = 'title'; G.setScene(W.ext); G.drone = root.Opening.DRONE; G.skipping = false; G.hideLine();
   $('fade').style.transition = 'opacity .8s ease'; $('fade').style.opacity = 0;
   $('bContinue').disabled = !G.loadSave(); show('title');
   { const shot = G.memShot || (G.loadSave() && G.titleShot()); $('titleShot').style.backgroundImage = shot ? 'url(' + shot + ')' : ''; document.body.classList.toggle('titlePic', !!shot); }
@@ -25,6 +25,13 @@ const toTitle = () => {
   if (A && A.ctx) { A.ambience({ wind: 0.5, birds: 0.5, fire: 0 }); A.duckMusic(1, 2); A.startMusic(); }
   $('dev').style.display = 'block';
 };
+
+// A yes-or-no of the game's own (the browser's dialogs are small, ugly and awkward under a thumb): resolves true on the yes.
+const askYes = (title, text, yes) => new Promise(res => {
+  const box = $('confirmBox'), end = v => { box.classList.remove('on'); $('cfYes').onclick = $('cfNo').onclick = null; res(v); };
+  $('cfTitle').textContent = title; $('cfText').textContent = text; $('cfYes').textContent = yes; $('cfYes').onclick = () => end(true); $('cfNo').onclick = () => end(false); box.classList.add('on');
+});
+['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault()));       // (a pinch on a phone is the camera's business, not the page's)
 
 // Notice and 18+ confirmation, remembered once given.
 if (G.store.get(G.NOTICE_KEY, false)) { toTitle(); } else { G.mode = 'notice'; show('notice'); }
@@ -175,7 +182,7 @@ function showEnd() {
   const s = G.loadSave() || {}, two = ['dress', 'beanstalk', 'climb', 'climb-done', 'meadow', 'meadow-done', 'castle'].includes(s.step), beans = ['beans', 'planted', 'garden', 'garden-done'].includes(s.step);
   $('endTitle').textContent = G.castleResult === 'nursery' || G.castleResult === 'discipline' || G.castleResult === 'dressed' || G.castleResult === 'chores' || G.castleResult === 'bath' || G.castleResult === 'bed' ? 'Chapter Three \u2014 The Measure of a Man' : G.castleResult === 'wake' || G.castleResult === 'breakfast' ? 'Chapter Four \u2014 The Golden Egg' : two ? 'Chapter Two \u2014 The Climb' : 'Chapter One \u2014 Market Day';
   $('endText').textContent = G.castleResult === 'breakfast' ? 'Breakfast is eaten, and the hen is waiting.' : G.castleResult === 'wake' ? 'Jack wakes in the nursery from a dream of home, with no intention of going back to his Mother with nothing.' : G.castleResult === 'bed' ? 'Jack is tucked up in the nursery, under the moon, and means to go down in the morning.' : G.castleResult === 'bath' ? 'Jack has been bathed, warm and clean, and fussed over, by candlelight.' : G.castleResult === 'chores' ? 'The roost is swept, the hen is fed and watered and settled on her cushion, and Gerda will be back before the afternoon is out.' : G.castleResult === 'dressed' ? 'Out of the old things and into clean ones, boots and all, with a great deal of praise for it.' : G.castleResult === 'discipline' ? 'Gerda has corrected Jack over her knee, put him right again, and kept his knife.' : G.castleResult === 'nursery' ? 'In the nursery, Jack has found a book with his own name in it, and Gerda is standing in the doorway.' : G.castleResult === 'caught' ? 'Gerda has found Jack, and shut him in a velvet-lined box on top of her cupboard.' : G.castleResult === 'hidden' ? 'Gerda has gone, and Jack is still hidden in her kitchen.' : s.step === 'castle' ? 'Jack is hidden in the cupboard under the pans, and heavy footsteps are coming into the kitchen.' : s.step === 'meadow-done' ? 'Jack has stepped through the castle gate, and somewhere inside a bell is tolling.' : s.step === 'climb-done' ? 'Jack has climbed through the clouds.' : s.step === 'dress' ? 'Jack is awake in the dawn, with a beanstalk outside.' : s.step === 'beanstalk' ? 'A beanstalk has grown in the night, and Jack means to climb it.' : s.step === 'garden-done' ? 'The beans are in the ground, and Jack is indoors.' : s.step === 'planted' ? 'Jack goes out into the dark to plant the beans.' : beans ? 'Jack has the beans, and a mother waiting up for him.' : 'Jack has a cow to sell in the morning.';
-  show('endcard'); G.mode = 'end'; $('fade').style.transition = 'none'; $('fade').style.opacity = 0; document.body.classList.remove('playing', 'cutscene');
+  show('endcard'); G.mode = 'end'; $('fade').style.transition = 'none'; $('fade').style.opacity = 0;
 }
 // Level select (debug): plays from a chapter without touching the saved game.
 $('levelSel').onchange = async () => {
@@ -214,13 +221,13 @@ $('levelSel').onchange = async () => {
 if (/[?&]debug\b/.test(location.search)) G.debugCtl = true;
 $('dbgBack').onclick = () => G.rewind(); $('dbgPlay').onclick = () => G.pause(); $('dbgFwd').onclick = () => G.forward();
 setInterval(() => { const on = G.debugCtl && G.mode === 'cutscene'; document.body.classList.toggle('dbg', on); if (on) { $('dbgPlay').textContent = G.paused ? '\u25B6' : '\u275A\u275A'; $('dbgBack').disabled = !G.rerun; $('dbgInfo').textContent = 'beat ' + G.beat + (G.seekTo != null ? ' \u2192 ' + G.seekTo : ''); } }, 150);
-$('bNew').onclick = () => { G.noSave = false; if (G.loadSave() && !confirm('Start a new game? Your saved game will be replaced.')) return; G.clearSave(); playOpening(); };
-$('bContinue').onclick = () => { G.noSave = false; wake(); const sv = G.loadSave() || {}; if (sv.step === 'market-day') playMarket(); else if (sv.step === 'market-road') playRoad(); else if (sv.step === 'garden-done') playChapter3(); else if (sv.step === 'dress') playChapter3('dress'); else if (sv.step === 'beanstalk' || sv.step === 'climb') playClimb(); else if (sv.step === 'climb-done' || sv.step === 'meadow') playMeadow(); else if (sv.step === 'meadow-done' || sv.step === 'castle') playCastle(true); else if (sv.step === 'ch3') playCh3(); else if (sv.step === 'ch3nursery') playCh3('nursery'); else if (sv.step === 'ch3dress') playCh3Dress(true); else if (sv.step === 'ch3chores') playCh3Chores(false, true); else if (sv.step === 'ch3chorework') playCh3Chores(true, true); else if (sv.step === 'ch3bath') playCh3Bath(true); else if (sv.step === 'ch4') playCh4(); else if (sv.step === 'beans') playNight((sv.choices) || []); else { hideAll(); showEnd(); } };
+$('bNew').onclick = async () => { goWide(); G.noSave = false; if (G.loadSave() && !await askYes('Start a new game?', 'Your saved game will be replaced.', 'Start a new game')) return; G.clearSave(); playOpening(); };
+$('bContinue').onclick = () => { goWide(); G.noSave = false; wake(); const sv = G.loadSave() || {}; if (sv.step === 'market-day') playMarket(); else if (sv.step === 'market-road') playRoad(); else if (sv.step === 'garden-done') playChapter3(); else if (sv.step === 'dress') playChapter3('dress'); else if (sv.step === 'beanstalk' || sv.step === 'climb') playClimb(); else if (sv.step === 'climb-done' || sv.step === 'meadow') playMeadow(); else if (sv.step === 'meadow-done' || sv.step === 'castle') playCastle(true); else if (sv.step === 'ch3') playCh3(); else if (sv.step === 'ch3nursery') playCh3('nursery'); else if (sv.step === 'ch3dress') playCh3Dress(true); else if (sv.step === 'ch3chores') playCh3Chores(false, true); else if (sv.step === 'ch3chorework') playCh3Chores(true, true); else if (sv.step === 'ch3bath') playCh3Bath(true); else if (sv.step === 'ch4') playCh4(); else if (sv.step === 'beans') playNight((sv.choices) || []); else { hideAll(); showEnd(); } };
 $('bSettings').onclick = () => { wake(); show('settings'); };
 $('bBack').onclick = () => { G.saveSettings(); if (pmOpen()) pmBack(); else show('title'); };
 $('bTitle').onclick = toTitle;
 $('skip').onclick = () => { G.skipping = true; };
-$('bReset').onclick = () => { if (confirm('Delete your saved game?')) { G.clearSave(); $('bContinue').disabled = true; } };
+$('bReset').onclick = async () => { if (await askYes('Delete your saved game?', 'This cannot be undone.', 'Delete it')) { G.clearSave(); $('bContinue').disabled = true; } };
 
 // The pause menu: the Menu button, or Escape, during anything playable. It stops the scene where it stands; its settings open in the same pop-up.
 const setCard = $('settings').firstElementChild, pm = $('pmenu');
@@ -232,9 +239,16 @@ function pmBack() { if (setCard.parentNode === pm) $('settings').appendChild(set
 function pmHide() { pm.classList.remove('on'); document.body.classList.remove('pm'); pmBack(); if (!pmWas) G.pause(false); }
 $('menuBtn').onclick = pmShow; $('pmResume').onclick = pmHide;
 $('pmSettings').onclick = () => { $('pmMain').style.display = 'none'; pm.appendChild(setCard); };
-$('pmTitle').onclick = () => { if (confirm('Return to the title? Your last save point is kept; progress within this scene is lost.')) location.reload(); };
+$('pmTitle').onclick = async () => { if (await askYes('Return to the title?', 'Your last save point is kept; progress within this scene is lost.', 'Return to the title')) location.reload(); };
 root.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (pmOpen()) { pmHide(); e.preventDefault(); } else if (playable()) { pmShow(); e.preventDefault(); } });
 setInterval(() => document.body.classList.toggle('inplay', playable() && !pmOpen()), 150);
+
+// The phone held upright: the page puts up a "turn it sideways" card, and the story waits behind it (and goes on when it is turned back).
+{ const upright = root.matchMedia('(orientation: portrait) and (max-width: 820px) and (pointer: coarse)'); let heldByTurn = false;
+  const onTurn = () => { if (upright.matches) { if (!G.paused && playable()) { G.pause(true); heldByTurn = true; } } else if (heldByTurn) { heldByTurn = false; if (!pmOpen()) G.pause(false); } };
+  if (upright.addEventListener) upright.addEventListener('change', onTurn); else if (upright.addListener) upright.addListener(onTurn); onTurn(); }
+// On a phone, the game takes the whole screen, and asks for it to stay sideways, the first time a game is begun (where the browser lets it).
+const goWide = () => { try { if (!root.matchMedia('(pointer: coarse)').matches || root.matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) return; const d = document.documentElement, f = d.requestFullscreen || d.webkitRequestFullscreen; if (f && !document.fullscreenElement) { const r = f.call(d, { navigationUI: 'hide' }); const lock = () => { try { const o = root.screen && root.screen.orientation; if (o && o.lock) o.lock('landscape').catch(() => {}); } catch (e) { /* not allowed here */ } }; if (r && r.then) r.then(lock, () => {}); else lock(); } } catch (e) { /* not allowed here */ } };
 
 // Settings controls.
 const vol = [['vMaster', 'master'], ['vMusic', 'music'], ['vSfx', 'sfx'], ['vVoice', 'voice']];

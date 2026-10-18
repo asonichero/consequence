@@ -8,7 +8,7 @@
 const THREE = root.THREE, F = root.Farm, A = root.GameAudio, V3 = THREE.Vector3;
 const v = (x, y, z) => new V3(x, y, z), clamp = (x, a, b) => Math.max(a, Math.min(b, x)), lerp = (a, b, t) => a + (b - a) * t;
 const angDiff = (a, b) => { let d = (a - b) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
-const SC = 0.95, K0 = 0.25, K1 = 0.10;
+const SC = root.Blocky.SCALE.adult, K0 = 0.25, K1 = 0.10;
 const START_Z = 40, DOOR_Z = -788, TRIGGER_Z = -742, CZW = -790;                    // (the walk runs along -z, from the edge of the cloud, over a paved forecourt, to the castle's great door)
 const KFIX = (/[?&]meadowk=([0-9.]+)/.exec(typeof location !== 'undefined' ? location.search : '') || [])[1];            // (a test: ?meadowk=1 puts Jack at full size the whole way, to judge the flora against him)
 const kOf = z => KFIX ? +KFIX : lerp(K0, K1, clamp((START_Z - z) / (START_Z - TRIGGER_Z), 0, 1));
@@ -122,8 +122,9 @@ function run(G, W) {
     camera.near = 0.1; camera.updateProjectionMatrix();
     A && A.ambience({ wind: 0.14, birds: 0, fire: 0 });
     A && A.ctx && (A.startMusic({ theme: 'meadow' }), A.duckMusic(0.9, 3));
-    const st = { pos: v(0, 0, START_Z), heading: Math.PI, walkN: 0, walkPh: 0, mode: 'intro', free: false, camA: Math.PI / 2, pitch: 0.5, zoom: 1, vy: 0, y: 0, jumpReq: false, gy: 0, kk: K0, look: 0, shiver: 0, bob: 0, craned: 0, frown: 0, stillSaid: 0, toastAt: 0, spd: 0, gripPrev: false, air: false };
+    const st = { pos: v(0, 0, START_Z), heading: Math.PI, walkN: 0, walkPh: 0, mode: 'intro', free: false, camA: Math.PI / 2, pitch: 0.5, zoom: 1, vy: 0, y: 0, jumpReq: false, gy: 0, kk: K0, look: 0, shiver: 0, bob: 0, craned: 0, frown: 0, stillSaid: 0, spd: 0, gripPrev: false, air: false };
     // Jack's body: walking, looking, shivering.
+    const wasAfter = jackOut.after;
     jackOut.after = r => {
       const w = Math.sin(st.walkPh) * 0.7 * st.walkN, t = G.t, sh = st.shiver * 0.05 * Math.sin(t * 38);
       r.legL.thigh.rotation.x = w - st.bob * 0.5; r.legR.thigh.rotation.x = -w - st.bob * 0.5; r.legL.knee.rotation.x = st.bob * 1.0; r.legR.knee.rotation.x = st.bob * 1.0;
@@ -132,16 +133,8 @@ function run(G, W) {
       if (st.air) { r.armL.rotation.x = r.armR.rotation.x = -2.5; r.legL.thigh.rotation.x = -0.5; r.legR.thigh.rotation.x = 0.25; r.legR.knee.rotation.x = 0.5; r.legL.knee.rotation.x = 0; }                    // (the leap, as in Chapter One)
     };
     // ── HUD and controls ──
-    const css = document.createElement('style');
-    css.textContent = `#mwHud { position: fixed; inset: 0; pointer-events: none; z-index: 12; font-family: Georgia, serif; color: #ece8df; }
-      #mwObj { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(10,12,16,0.7); border: 1px solid #4a4d58; border-radius: 8px; padding: 8px 16px; font-size: clamp(13px, 1.9vw, 17px); text-align: center; display: none; }
-      #mwToast { position: absolute; left: 50%; bottom: 22vh; transform: translateX(-50%); background: rgba(10,12,16,0.8); border: 1px solid #4a4d58; padding: 7px 15px; border-radius: 8px; font-size: 14px; max-width: 80vw; text-align: center; opacity: 0; transition: opacity .5s; }`;
-    document.head.appendChild(css);
-    const hud = document.createElement('div'); hud.id = 'mwHud'; hud.style.display = 'none';
-    hud.innerHTML = '<div id="mwObj">Walk to the castle.</div><div id="mwToast"></div>';
-    document.body.appendChild(hud);
     const $ = id => document.getElementById(id);
-    const toast = (t, ms = 5000) => { $('mwToast').textContent = root.Tips.clean(t); $('mwToast').style.opacity = 1; st.toastAt = performance.now() + ms; };
+    const toast = (t, ms = 5000) => G.hud.toast(t, ms);
     const keys = {}, ui = root.TouchUI.create({ keys, run: true, jump: true, cam: true }), stick = ui.stick, KM = { w: 'up', W: 'up', ArrowUp: 'up', s: 'down', S: 'down', ArrowDown: 'down', a: 'left', A: 'left', ArrowLeft: 'left', d: 'right', D: 'right', ArrowRight: 'right', Shift: 'run' };
     ui.show(false);                                                                  // (shown only while he walks)
     const typing = e => e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
@@ -189,18 +182,17 @@ function run(G, W) {
         if (st.pos.z <= TRIGGER_Z && st.mode === 'walk') { st.mode = 'arrive'; arrive(); }
       }
       place();
-      if (st.toastAt && performance.now() > st.toastAt) { $('mwToast').style.opacity = 0; st.toastAt = 0; }
       if (st.free) {
         const kk = st.kk, d = ZOOMS[st.zoom].d * kk, at = v(st.pos.x, st.y + 15 * SC * kk, st.pos.z), want = v(at.x + Math.cos(st.camA) * d * Math.cos(st.pitch), Math.max(3 * kk, at.y + Math.sin(st.pitch) * d), at.z + Math.sin(st.camA) * d * Math.cos(st.pitch));
         if (camPos.lengthSq() === 0) camPos.copy(want); else camPos.lerp(want, Math.min(1, dt * 8)); camLook.copy(at); G.cut({ pos: camPos, look: camLook, fov: 48 });
       }
     };
-    const cleanup = () => { root.removeEventListener('keydown', kd); root.removeEventListener('keyup', ku); el.removeEventListener('wheel', wheel); el.removeEventListener('pointerdown', pd); el.removeEventListener('pointermove', pm); el.removeEventListener('pointerup', pu); el.removeEventListener('pointercancel', pu); G.updaters = G.updaters.filter(u => u !== tick); hud.remove(); css.remove(); ui.destroy(); jackOut.after = null; jackOut.root.scale.setScalar(SC); camera.near = nearOld; camera.updateProjectionMatrix(); };
+    const cleanup = () => { root.removeEventListener('keydown', kd); root.removeEventListener('keyup', ku); el.removeEventListener('wheel', wheel); el.removeEventListener('pointerdown', pd); el.removeEventListener('pointermove', pm); el.removeEventListener('pointerup', pu); el.removeEventListener('pointercancel', pu); G.updaters = G.updaters.filter(u => u !== tick); G.hud.reset(); ui.destroy(); jackOut.after = wasAfter; jackOut.root.scale.setScalar(SC); camera.near = nearOld; camera.updateProjectionMatrix(); };
     place(); G.updaters.push(tick); G.meadow = { st, blocked, pathX };
 
     // ── The opening: the beanstalk climbing out of the cloud behind him, and the castle a long way off; then Jack, with something to say; then round behind him, and the walk. ──
     const k = K0, S = () => st.pos, wait = G.wait;
-    G.mode = 'cutscene'; document.body.classList.add('cutscene');
+    G.mode = 'cutscene';
     const f = $('fade'); f.style.background = '#fff'; f.style.transition = 'none'; f.style.opacity = 1;
     st.look = 0.1; st.heading = Math.PI;
     G.cut({ pos: v(46, 9, 112), look: v(0, 14, 78), fov: 50 }); await wait(0.5);
@@ -217,12 +209,12 @@ function run(G, W) {
     await G.say('jack', 'Mother will eat every word. Come on, then. Let’s see what the castle has to offer.');
     // Round behind him, and the walk is his.
     { const kk = K0, d = 92 * kk, c = Math.cos(0.5); await G.shot({ pos: v(0, 15 * SC * kk + Math.sin(0.5) * d, S().z + d * c), look: v(0, 15 * SC * kk, S().z), fov: 48 }, 1.8, 'inOut'); }
-    G.skipping = false; G.mode = 'play'; document.body.classList.remove('cutscene'); G.hideLine && G.hideLine(); st.heading = Math.PI; st.look = 0; st.camA = Math.PI / 2; camPos.set(0, 0, 0);
-    st.free = true; st.mode = 'walk'; hud.style.display = 'block'; ui.show(true); $('mwObj').style.display = 'block';
+    G.skipping = false; G.mode = 'explore'; G.hideLine && G.hideLine(); st.heading = Math.PI; st.look = 0; st.camA = Math.PI / 2; camPos.set(0, 0, 0);
+    st.free = true; st.mode = 'walk'; ui.show(true); G.hud.objective('Walk to the castle.'); G.cue.set('goal', { x: 0, z: DOOR_Z + 24, r: 22 });       // (the great door, a light over it from afar)
 
     // ── At the gate. ──
     async function arrive() {
-      st.free = false; st.walkN = 0; st.bob = 0; hud.style.display = 'none'; ui.show(false); G.mode = 'cutscene'; document.body.classList.add('cutscene'); st.pos.x = clamp(st.pos.x, -30, 30); st.heading = Math.PI;
+      st.free = false; st.walkN = 0; st.bob = 0; G.hud.reset(); ui.show(false); G.mode = 'cutscene'; st.pos.x = clamp(st.pos.x, -30, 30); st.heading = Math.PI;
       const zJ = st.pos.z; G.cut({ pos: v(st.pos.x + 5, 2.4, zJ + 34), look: v(0, 30, DOOR_Z), fov: 56 }); st.look = -0.7; st.craned = 1;
       await G.shot({ pos: v(st.pos.x + 4, 1.4, zJ + 26), look: v(0, 72, DOOR_Z), fov: 64 }, 6.5, 'inOut'); await wait(0.8);
       G.cut({ pos: v(st.pos.x - 3, 3.4, zJ - 10), look: v(st.pos.x, 2.5, zJ), fov: 36 }); st.look = 0.1; st.craned = 0; W.paintJack(jackOut, { expr: 4 });
@@ -246,7 +238,7 @@ function run(G, W) {
       await walkTo(0, CZW + 0.6, 1.5, () => ({ pos: v(-4, st.y + 1.2, st.pos.z + 7), look: v(0, st.y + 2.8, CZW), fov: 40 }));
       await fadeOut; A && A.ambience({ wind: 0, birds: 0, fire: 0 }); await wait(0.5);
       jackOut.root.visible = false; G.snapshotFarm(world, () => ({ pos: v(-120, 105, CZW + 360), look: v(10, 110, CZW), fov: 52 })); jackOut.root.visible = true;       // (the title screen, from here on: the castle from the meadow)
-      cleanup(); G.mode = 'end'; document.body.classList.remove('cutscene'); resolve({ arrived: true });
+      cleanup(); G.mode = 'end'; resolve({ arrived: true });
     }
   });
 }
