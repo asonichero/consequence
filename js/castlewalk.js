@@ -1835,37 +1835,37 @@ function run(G, W, opts) {
       st.pose = { legLx: 0, legRx: 0, kneeL: 0, kneeR: 0, armLx: 0.05, armRx: 0.05, armLz: 0.1, armRz: -0.1, torso: 0, neckX: 0.1, elbowL: 0, elbowR: 0, neckY: 0 };
       let cur = { outfit: 'Night', trousers: 'up', drawers: 'up', expr: 'smile' }; const paint = o => { Object.assign(cur, o); W.paintJack(jackOut, cur); }; G.bathPaint = () => paint({});
       const pN = pile(nightB, 0), pNS = pile(nshortsB, 4), pD = pile(drawB, 8);
-      await sayW('gerda', 'Now then, let’s have you out of your night things.');
-      await askFor('Step out', 'Shorts first. One foot, two feet, and out we go!', ['Step out for me, sweetheart. One foot, then the other.', 'Out of your little shorts now, there’s a good boy.']);
+      await sayW('gerda', 'Now then. Out of your night things.');
+      await askFor('Step out', 'Shorts first. One foot, then the other.', ['Step out for me, Jack.', 'Out of your little shorts now. There’s a good boy.']);
       await handTo(jackOut.hips.localToWorld(new V3(0, 0, 0)), true, 0.6); paint({ shorts: false, nodraw: true }); hNShorts.visible = true; A && A.blip && A.blip(); await handTo(jackOut.hips.localToWorld(new V3(0, -5, 0)), true, 0.5); await steps(); await down(hNShorts, pNS);
-      await sayW('gerda', 'Clever boy!');
-      await askFor('Arms up', 'Arms up to the sky, now!', ['Arms up high for me, little climber.', 'Up, up, up, Jack. High as you can.']);
+      await sayW('gerda', 'There. That’s the night off you.');
+      await askFor('Arms up', 'Arms up.', ['Arms up, Jack.', 'Higher, as high as you can.']);
       await armsUp(true); await handTo(jackOut.torso.localToWorld(new V3(0, 3, 4)), true, 0.5); await handTo(jackOut.torso.localToWorld(new V3(0, 22, 0)), true, 0.7);
       paint({ strip: 2, blush: true, expr: 'shy' }); hNight.visible = true; A && A.blip && A.blip(); await G.wait(0.3); await armsUp(false);       // (bare, and bashful: he looks away a little, not covering)
       { const tw = async (to, secs) => { const f0 = { y: st.pose.neckY || 0, x: st.pose.neckX || 0.1, t: st.pose.torso || 0 }, n = Math.round(secs / 0.04); for (let i = 1; i <= n; i++) { const k = ease(i / n); st.pose.neckY = W3(f0.y, to.y, k); st.pose.neckX = W3(f0.x, to.x, k); st.pose.torso = W3(f0.t, to.t, k); await G.wait(0.04); } }; await Promise.all([tw({ y: 0.55, x: 0.35, t: 0.08 }, 0.7), down(hNight, pN)]); }
-      await sayW('gerda', 'Off comes the nightshirt, off, off, off!');
-      await sayW('gerda', 'There! Fresh as a daisy.');
+      await sayW('gerda', 'Off comes the nightshirt.');
+      await sayW('gerda', 'There. Fresh as a daisy.');
       hDraw.visible = true; await handTo(v(st.pos.x, 3, st.pos.z - 2), true, 0.6);
-      await askFor('Step in', 'Clean drawers now! In we go, one foot, two feet.', ['Step in for me, Jack. One foot, then the other.', 'In you go, sweetheart. They’re waiting for you.']);
+      await askFor('Step in', 'Clean drawers. In you go, one foot, then the other.', ['Step in for me, Jack.', 'In you go, sweetheart. They’re waiting for you.']);
       await steps(); await handTo(jackOut.hips.localToWorld(new V3(0, -4, 0)), true, 0.4); await handTo(jackOut.hips.localToWorld(new V3(0, 2, 0)), true, 0.6); hDraw.visible = false; paint({ outfit: 'Day', strip: 1, expr: 'smile' }); A && A.blip && A.blip(); await rest(0.5);
       await sayW('gerda', 'Lovely. Now your soft green tunic.');
       hTunic.visible = true; await handTo(jackOut.torso.localToWorld(new V3(0, 16, 0)), true, 0.6);
-      await askFor('Arms up', 'Arms up, and over your head it goes!', ['Arms up, little climber.', 'Up high for me, Jack. Up, up, up.']);
+      await askFor('Arms up', 'Arms up, and over it goes.', ['Arms up, Jack.', 'Up high for me.']);
       await armsUp(true); await handTo(jackOut.torso.localToWorld(new V3(0, 8, 0)), true, 0.6); hTunic.visible = false; paint({ outfit: 'Day', strip: undefined, shorts: false, blush: false, expr: 'smile' }); A && A.blip && A.blip(); await armsUp(false); { const y0 = st.pose.neckY || 0; for (let i = 1; i <= 8; i++) { st.pose.neckY = W3(y0, 0, ease(i / 8)); st.pose.neckX = W3(st.pose.neckX, 0.1, ease(i / 8)); st.pose.torso = W3(st.pose.torso || 0, 0, ease(i / 8)); await G.wait(0.04); } } await rest(0.5);
-      await sayW('gerda', 'Oh, that does suit you, little one.');
+      await sayW('gerda', 'There. That suits you.');
       hShorts.visible = true; await handTo(v(st.pos.x, 3, st.pos.z - 2), true, 0.6);
-      await askFor('Step in', 'And the last, little shorts. In with a wiggle!', ['Step in, Jack. One foot, then the other.', 'In you go, sweetheart, and up they come.']);
+      await askFor('Step in', 'And the last. In you go, and up they come.', ['Step in, Jack.', 'In you go, sweetheart.']);
       await steps(); await handTo(jackOut.hips.localToWorld(new V3(0, -4, 0)), true, 0.4); await handTo(jackOut.hips.localToWorld(new V3(0, 2, 0)), true, 0.6); hShorts.visible = false; paint({ outfit: 'Day', shorts: undefined, strip: undefined, expr: 'smile' }); A && A.blip && A.blip(); await rest(0.6);
-      await sayW('gerda', 'There! Dressed and bright as a button.');
+      await sayW('gerda', 'There. Dressed, and looking more yourself.');
       // she stands, and offers her hand
       await kneel(false, 0.8); await rest(0.4);
       G.cut({ pos: v(-208, 34, -232), look: v(-150, 14, -250), fov: 48 });       // (a new beat: she is standing, and he is dressed)
-      await sayW('gerda', 'Come along, then. Give me your hand.');
+      await sayW('gerda', 'Come along. Give me your hand.');
       // her hand finds his (he is at her right, and reaches up to her with his left); she leads him out, standing nearly straight, and he walks
       { let lx = -10; const lz = 3, wp = hh => v(gst.x + lx * Math.cos(hh) + lz * Math.sin(hh), 0, gst.z - lx * Math.sin(hh) + lz * Math.cos(hh));
         const hh = gst.h, dest = wp(hh), p0 = st.pos.clone(), hd0 = st.heading;
         for (let i = 1; i <= 20; i++) { const k = ease(i / 20); st.pos.set(W3(p0.x, dest.x, k), 0, W3(p0.z, dest.z, k)); st.heading = hd0 + angDiff(hh, hd0) * k; st.walkN = 1; st.walkPh = (st.walkPh || 0) + 0.5; await G.wait(0.04); } st.walkN = 0; st.heading = hh;
-        st.pose = {}; await askFor('Take her hand', 'That’s it. Come along with me, little climber.', ['Take my hand, Jack.', 'Hand in mine, sweetheart.']);
+        st.pose = {}; await askFor('Take her hand', 'That’s it. Come along with me.', ['Take my hand, Jack.', 'Hand in mine, sweetheart.']);
         // she stays standing: his arm rises, and bends at the elbow, to meet her hand where it hangs (found by trying his arm, and how far hers is forward)
         gst.bend = 0; gst.lreach = 0; let best = { c: 1e9 }; const ref = wp(hh), xAx = new V3(Math.cos(hh), 0, -Math.sin(hh)); jackOut.root.position.set(ref.x, 0, ref.z); jackOut.root.rotation.set(0, hh, 0);
         for (const rc of [0, 0.2, 0.4, 0.6]) { gst.reach = rc; placeGerda(); root.Blocky.step(gerda, 0); gerda.root.updateMatrixWorld(true); const Wp = wr();
