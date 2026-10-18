@@ -190,7 +190,6 @@ function create(els) {
     }, 30);
     caps.add(finish);
   });
-  G.think = (text, opts) => G.say('jack', text, Object.assign({ thought: true }, opts || {}));       // (Jack's thought, as distinct from what he says)
   G.captionOff = () => { subs.classList.remove('thought'); capTok++; for (const f of [...caps]) f(); subs.style.display = 'none'; };
   // A choice for the player: buttons inside the dialogue box (or the keys 1 to 9); resolves with the index picked.
   G.choose = (who, options) => new Promise(resolve => {
