@@ -24,7 +24,7 @@ The game is played with a thumb: a phone held sideways is the one device it is d
 
 **One HUD** (`G.hud`): the objective (one standing line, or a checklist), a passing toast, and meters (trust, stamina), stacked top left inside the safe edge, drawn in `explore` and `beat` only. **One set of world cues** (`G.cue`): a soft gold ring on the ground where something matters now, with a column of light over it when it is far off. A scene says what it points at; none draws its own HUD, prompt or hint.
 
-**One touch UI** (`js/touchui.js`): the stick on the left, the Context button (the verb of what a tap will do now) in the right thumb's own place; a button a scene does not use is not drawn, and one that would do nothing is greyed. The `explore` layout is the same in every scene.
+**One touch UI** (`js/touchui.js`): the stick on the left, the Context button (the verb of what a tap will do now) in the right thumb's own place; a button a scene does not use is not drawn, and one that would do nothing is greyed. The `explore` layout is the same in every scene. The pause menu's **How to play** card draws each button as it looks on the screen, with what it does.
 
 **Rules kept by the tests** (`tests/presentation.test.js`): no scene writes a key name into text the player sees; scenes name only the modes the shell knows and never set the mode classes; no scene builds its own objective, toast or hint element.
 
