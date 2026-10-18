@@ -214,7 +214,7 @@ function create(view, opts) {
   const variant = () => st.implement !== 'hand' ? null : (st.armHold || 0) > 0.5 ? 'hand~hold' : (st.armReach || 0) > 0.5 ? 'hand~reach' : null;       // (the arm pose in force has offsets of its own)
   const editImp = () => variant() || st.implement;       // (what the editor works on)      // each body's poses for the implement in hand
   const BONES = {
-    gerda: { torso: gerda.torso, neck: gerda.neck, armL: gerda.armL, armR: gerda.armR, elbowL: gerda.elbowL, elbowR: gerda.elbow, wristR: gerda.wrist, thighL: gerda.legL.thigh, thighR: gerda.legR.thigh, kneeL: gerda.legL.knee, kneeR: gerda.legR.knee, paddle: tool, birch: birchTool },
+    gerda: { frame: gerda.root, torso: gerda.torso, neck: gerda.neck, armL: gerda.armL, armR: gerda.armR, elbowL: gerda.elbowL, elbowR: gerda.elbow, wristR: gerda.wrist, thighL: gerda.legL.thigh, thighR: gerda.legR.thigh, kneeL: gerda.legL.knee, kneeR: gerda.legR.knee, paddle: tool, birch: birchTool },
     jack: { frame, torso: jack.torso, neck: jack.neck, glutes: glutesTilt, armL: jack.armL, armR: jack.armR, elbowL: jack.elbowL, elbowR: jack.elbow, thighL: jack.legL.thigh, thighR: jack.legR.thigh, kneeL: jack.legL.knee, kneeR: jack.legR.knee },
   };
   const frameBase = frame.quaternion.clone(), glutesBase = glutesTilt.quaternion.clone(), basePos = new Map();
@@ -611,7 +611,8 @@ function create(view, opts) {
     frame.position.copy(fa.p).lerp(fb.p, eb); frame.position.y += hop;
     applyEdits('jack', ['frame'], jackWeights());
     // The giver's place: seated in the chair (her shins long enough to reach its floor), or standing at the table's side.
-    gerda.root.position.copy(GIVER_AT[st.giverStance]); chair.visible = st.giverStance === 'sit' && opts.noChair !== true;
+    gerda.root.position.copy(GIVER_AT[st.giverStance]); applyEdits('gerda', ['frame'], gerdaWeights());       // (the giver's frame: her whole body moved and turned, over wherever she stands, before her pose is built on it)
+    chair.visible = st.giverStance === 'sit' && opts.noChair !== true;
     if (st.shinsSeated !== (st.giverStance === 'sit')) { st.shinsSeated = st.giverStance === 'sit'; setShins(st.shinsSeated); }
     { const onStool = st.to === 'stool' || st.from === 'stool', onTable = st.to === 'table' || st.from === 'table', want = st.showTable !== false;
       if (table) { table.visible = want && onTable || (st.showTable === true && !onStool); table.position.x = tableEdgeX(sz); }
@@ -649,6 +650,7 @@ function create(view, opts) {
   const BLADE_END = -(HANDLE + BLADE_L);
   const HANDLE_DEFS = {
     gerda: [
+      H('frame', 'move', 'Giver (moves her whole body)', hpt(gerda.root, 0, 0, 0)),
       H('neck', 'aim', 'Head', hpt(gerda.neck, 0, 4, 0)),
       H('torso', 'aim', 'Chest (turns and leans the torso)', hpt(gerda.torso, 0, 12, 0)),
       H('torso', 'move', 'Torso (moves it)', hpt(gerda.torso, 0, 2, 0)),
@@ -688,7 +690,7 @@ function create(view, opts) {
     thighL: 'Left thigh: swings the left leg from the hip.', thighR: 'Right thigh: swings the right leg from the hip.',
     kneeL: 'Left knee: bends the left lower leg.', kneeR: 'Right knee: bends the right lower leg.',
     glutes: 'Glutes block: tilts the block that bridges his back and thighs.',
-    frame: 'Jack: moves and turns his whole body on her lap.',
+    frame: 'Frame: moves and turns the whole body (Jack on her lap; for the giver, wherever she stands), apart from the torso, which leans and turns from the hips.',
   };
   const handleMat = (color) => new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.9 });
   const handleGeo = { aim: new THREE.SphereGeometry(0.85, 14, 10), move: new THREE.BoxGeometry(1.3, 1.3, 1.3), twist: new THREE.OctahedronGeometry(1.0) };
