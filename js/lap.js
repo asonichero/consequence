@@ -549,9 +549,10 @@ function create(view, opts) {
   const STANDING = { standSeat: 1, standTable: 1 };
   // Where the glutes block rests, when his thighs are straight (standing, or kneeling upright): its top face level with the tops of his legs and its front face level with their fronts (the block is 5.2 deep, so its hinge, at its back face, is 5.16 behind the front of the legs, and the block hangs from there to 0.15 over their tops).
   // Folded over a knee or a table it hangs from the hinge in the plane of his back and tips forward, bridging his back and thighs (the poses in the file replace either).
+  let editingNow = () => false;       // (set once the editor's handles exist: while he is being posed, the block is shown, that its anchor has something to hold)
   const NATURAL = { standSeat: 1, standTable: 1, stool: 1 }, HINGE_NAT = [0.15, -3.01], HINGE_FOLD = [0.6, -2.55];
   jack.after = function (j) {
-    { const n = stanceNow(), up = NATURAL[n] ? st.trousers === 'down' : true; glutesTilt.visible = up;       // (upright, the block is there only while his trousers are down: otherwise they are on it)
+    { const n = stanceNow(), up = NATURAL[n] ? st.trousers === 'down' || editingNow() : true; glutesTilt.visible = up;       // (upright, the block is there only while his trousers are down: otherwise they are on it)
       const nat = (NATURAL[st.from] ? 1 : 0) + ((NATURAL[st.to] ? 1 : 0) - (NATURAL[st.from] ? 1 : 0)) * easeIO(clamp(st.blend, 0, 1));
       if (!glutesTilt.userData.proc) { glutesTilt.position.set(0, HINGE_FOLD[0] + (HINGE_NAT[0] - HINGE_FOLD[0]) * nat, HINGE_FOLD[1] + (HINGE_NAT[1] - HINGE_FOLD[1]) * nat); glutesTilt.rotation.x = -0.45 * (1 - nat); } }      // (the glutes block bridges his back and his thighs once they fold: upright, it would only cut into his legs)
     const sf = 1 - 0.72 * (st.settle || 0);      // (settled: he lies still over her lap, and only the contact itself moves him)
@@ -694,7 +695,7 @@ function create(view, opts) {
   for (const who in HANDLE_DEFS) for (const h of HANDLE_DEFS[who]) {
     h.who = who; h.mesh = new THREE.Mesh(handleGeo[h.kind], handleMat(HCOL[h.kind])); h.mesh.renderOrder = 999; h.mesh.userData.handle = h; h.mesh.visible = false; handleGroup.add(h.mesh);
   }
-  const hs = { on: false, who: 'gerda', bone: null, onPick: null, onChange: null, drag: null };
+  const hs = { on: false, who: 'gerda', bone: null, onPick: null, onChange: null, drag: null }; editingNow = () => hs.on;
   function updateHandles() {
     if (!hs.on) return;
     for (const w in HANDLE_DEFS) for (const h of HANDLE_DEFS[w]) {
