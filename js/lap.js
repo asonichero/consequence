@@ -547,14 +547,14 @@ function create(view, opts) {
     if (impl.paddle) applyEdits('gerda', ['paddle'], gwArm);
   };
   const STANDING = { standSeat: 1, standTable: 1 };
-  // Where the glutes block rests, when his thighs are straight (standing, or kneeling upright): its top face level with the tops of his legs and its front face level with their fronts (the block is 5.2 deep, so its hinge, at its back face, is 5.16 behind the front of the legs, and the block hangs from there to 0.15 over their tops).
-  // Folded over a knee or a table it hangs from the hinge in the plane of his back and tips forward, bridging his back and thighs (the poses in the file replace either).
+  // Where the glutes block rests, when his thighs are straight (standing, or kneeling upright): the position made in the editor (rolled half a turn about its own front-to-back axis, 1.8 lower and 0.5 forward of its hinge in the plane of his back).
+  // Folded over a knee or a table it hangs from that hinge and tips forward, bridging his back and thighs (the poses in the file replace either).
   let editingNow = () => false;       // (set once the editor's handles exist: while he is being posed, the block is shown, that its anchor has something to hold)
-  const NATURAL = { standSeat: 1, standTable: 1, stool: 1 }, HINGE_NAT = [0.15, -3.01], HINGE_FOLD = [0.6, -2.55];
+  const NATURAL = { standSeat: 1, standTable: 1, stool: 1 }, HINGE_NAT = [0.6 - 1.8, -2.55 + 0.5], HINGE_FOLD = [0.6, -2.55], Q_FOLD = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.45, 0, 0)), Q_NAT = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, Math.PI, 0, 'XYZ'));
   jack.after = function (j) {
-    { const n = stanceNow(), up = NATURAL[n] ? st.trousers === 'down' || editingNow() : true; glutesTilt.visible = up;       // (upright, the block is there only while his trousers are down: otherwise they are on it)
+    { const n = stanceNow(), up = n === 'stool' || !NATURAL[n] || st.trousers === 'down' || editingNow(); glutesTilt.visible = up;       // (kneeling on the stool it is always there, at any level of dress; standing, only while his trousers are down)
       const nat = (NATURAL[st.from] ? 1 : 0) + ((NATURAL[st.to] ? 1 : 0) - (NATURAL[st.from] ? 1 : 0)) * easeIO(clamp(st.blend, 0, 1));
-      if (!glutesTilt.userData.proc) { glutesTilt.position.set(0, HINGE_FOLD[0] + (HINGE_NAT[0] - HINGE_FOLD[0]) * nat, HINGE_FOLD[1] + (HINGE_NAT[1] - HINGE_FOLD[1]) * nat); glutesTilt.rotation.x = -0.45 * (1 - nat); } }      // (the glutes block bridges his back and his thighs once they fold: upright, it would only cut into his legs)
+      if (!glutesTilt.userData.proc) { glutesTilt.position.set(0, HINGE_FOLD[0] + (HINGE_NAT[0] - HINGE_FOLD[0]) * nat, HINGE_FOLD[1] + (HINGE_NAT[1] - HINGE_FOLD[1]) * nat); glutesTilt.quaternion.copy(Q_FOLD).slerp(Q_NAT, nat); } }      // (the glutes block bridges his back and his thighs once they fold: upright, it would only cut into his legs)
     const sf = 1 - 0.72 * (st.settle || 0);      // (settled: he lies still over her lap, and only the contact itself moves him)
     const k = J.kick * sf, d = clamp(pain.distress(), 0, 1.5) * sf, w = (Math.sin(J.t * 9) * 0.05 * Math.min(1, d) + Math.sin(J.t * 5.3) * 0.03 * Math.min(1, d)) * sf, sz = st.size * jackFull;
     const e = easeIO(clamp(st.blend, 0, 1)), p = mixPose(limbs(st.from, k, d, w, sz), limbs(st.to, k, d, w, sz), e);

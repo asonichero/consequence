@@ -541,5 +541,139 @@ root.LapPoses = {
       },
     },
   },
+  stool: {
+    100: {
+      gerda: {
+        hand: {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        paddle: {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        birch: {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        'hand~reach': {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        'hand~hold': {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+      },
+      jack: {
+        hand: {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        paddle: {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        birch: {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        'hand~reach': {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        'hand~hold': {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+      },
+    },
+    50: {
+      gerda: {
+        hand: {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        paddle: {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        birch: {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        'hand~reach': {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        'hand~hold': {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+      },
+      jack: {
+        hand: {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        paddle: {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        birch: {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        'hand~reach': {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+        'hand~hold': {
+          rest: {},
+          raised: {},
+          contactL: {},
+          contactR: {},
+        },
+      },
+    },
+  },
 };
 })(typeof window !== 'undefined' ? window : globalThis);
