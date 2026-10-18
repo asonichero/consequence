@@ -1907,7 +1907,9 @@ function run(G, W, opts) {
       // ── the table, the bowl, the spoon ──
       const bowl = new THREE.Group(); bowl.position.set(SX, TOP, SZ - 12); scene.add(bowl); mk(9, 3.2, 9, '#d8d4c8', 0, 1.6, 0, bowl); mk(7.4, 0.5, 7.4, '#c8c3b4', 0, 3.1, 0, bowl); const mush = mk(7, 1, 7, '#ebdfbc', 0, 3.2, 0, bowl); mk(2.2, 0.5, 2, '#d9b26a', -1, 3.8, 0.5, mush);
       let level = 6; const setLevel = () => { mush.scale.y = Math.max(0.05, level / 6); mush.position.y = 2.7 + 0.5 * Math.max(0.05, level / 6); mush.visible = level > 0; };
-      const spoon = new THREE.Group(); mk(0.9, 9, 0.9, '#8a6a42', 0, -4.5, 0, spoon); const sbowl = mk(2.6, 0.7, 3.4, '#9a7a52', 0, -9.2, 0.5, spoon); const load = mk(2.2, 0.8, 2.8, '#ebdfbc', 0, -8.7, 0.5, spoon); load.visible = false; spoon.position.set(0, -6, 0); jackOut.wrist.add(spoon);
+      // the spoon: a small one, lying on the table by the bowl until he picks it up; in his hand it lies across his fist, its handle and bowl on one flat axis, and does not run on out of his arm
+      const spoon = new THREE.Group(); mk(0.7, 0.4, 5.2, '#8a6a42', 0, 0, 1.1, spoon); mk(2.1, 0.4, 2.6, '#9a7a52', 0, 0, 4.6, spoon); const load = mk(1.7, 0.5, 2, '#ebdfbc', 0, 0.42, 4.6, spoon); load.visible = false; scene.add(spoon);
+      const CLOTH = TOP + 0.4, SPOON_AT = v(SX + 9, CLOTH + 0.25 * SC * st.s, SZ - 7); let holding = false; spoon.position.copy(SPOON_AT); spoon.rotation.y = Math.PI; spoon.scale.setScalar(SC * st.s);
       const splash = new THREE.Group(); mk(2.4, 0.5, 2, '#ebdfbc', 0, 0, 0, splash); mk(1.2, 0.4, 3, '#ebdfbc', 1.6, 0, 0.8, splash); splash.visible = false; scene.add(splash);       // (what goes on the table when he rushes)
       const chin = new THREE.Group(); mk(1.6, 1.2, 0.5, '#ebdfbc', 0, 0, 0, chin); mk(2.4, 0.8, 0.5, '#ebdfbc', 0.4, -3, 0.2, chin); chin.visible = false; jackOut.torso.add(chin); chin.position.set(0, 15, 2.5);       // (and on his front)
       const cloth = new THREE.Group(); mk(3.6, 0.5, 3.6, '#f2eee4', 0, 0, 0, cloth); cloth.visible = false; gerda.wrist.add(cloth); cloth.position.set(0, -6, 0.8); cloth.scale.setScalar(SC * 0.7 * 1.1);
@@ -1960,20 +1962,47 @@ function run(G, W, opts) {
       const THOUGHTS = ['She’s humming. She hasn’t looked round once. She trusts me to sit here.', 'A jug as tall as a cottage. Mother would sell a month of milk for one like it.', 'Warm light, and a floor I could lose a village on. And I’m not afraid of it any more. Why am I not afraid of it?', 'Every one of those eggs is bigger than I am. There must be something in this house worth carrying home.', 'The hen. If I’m good, she’ll let me near the hen again.', 'It’s good porridge. I’ll not say so out loud.'];
       let looking = false, tn = 0; const looks = async () => { if (looking) return; looking = true; const w = st.dressWait; st.dressWait = null; await sayW('jack', THOUGHTS[tn++ % THOUGHTS.length]); if (w) { st.dressWait = w; } looking = false; };
       const objEat = () => { G.hud.objective('Eat slowly: scoop when the button glows gold.   Spoonfuls left: ' + level); };
-      const scoop = async () => { await tp({ armRx: -1.25, elbowR: -0.3, neckX: 0.3 }, 0.5); load.visible = true; A && A.blip && A.blip(); await tp({ armRx: -1.9, elbowR: -1.3, neckX: 0.3 }, 0.6); };
-      const eat = async () => { await tp({ neckX: 0.42 }, 0.2); load.visible = false; A && A.rustle && A.rustle(0.3); level--; setLevel(); paint({ expr: 'smile' }); await tp({ armRx: -0.75, elbowR: -1.1, neckX: 0.2 }, 0.5); };
-      const spill = async () => { await tp({ armRx: -1.6, elbowR: -0.4, neckX: 0.3 }, 0.35); load.visible = true; await tp({ armRx: -2.1, elbowR: -1.0, neckX: 0.1 }, 0.25); load.visible = false; A && A.thwack && A.thwack(0.25, true, 0.3); splash.position.set(SX + 4, TOP + 0.3, SZ - 8); splash.visible = true; chin.visible = true; paint({ expr: 'wince' }); await tp({ armRx: -0.75, elbowR: -1.1, neckX: 0.4 }, 0.5); };
-      let messes = 0;
+      // ── his arm finds the spoon, the bowl and his mouth by trying (as the hand-holding is found), so that the spoon is always in his hand where it is meant to be ──
+      const Y_ = new V3(0, 1, 0), X_ = new V3(1, 0, 0), qA = new THREE.Quaternion(), qB = new THREE.Quaternion(), gripOf = () => jackOut.wrist.localToWorld(new V3(0, -5.5, 0.3)), sc_ = () => SC * st.s;
+      const spoonDir = (yaw, pitch) => new V3(Math.sin(st.heading + yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(st.heading + yaw) * Math.cos(pitch));
+      const spoonTick = () => { if (!holding) return; const q = st.pose || {}; spoon.position.copy(gripOf()); qA.setFromAxisAngle(Y_, st.heading + (q.spYaw === undefined ? 0.7 : q.spYaw)); qB.setFromAxisAngle(X_, q.spPitch === undefined ? 0.3 : q.spPitch); spoon.quaternion.copy(qA).multiply(qB); spoon.scale.setScalar(sc_()); }; G.updaters.push(spoonTick);
+      const solveR = (T, tipDir) => { const sv = { armRx: st.pose.armRx, elbowR: st.pose.elbowR, armRz: st.pose.armRz }, target = tipDir ? T.clone().addScaledVector(tipDir, -4.6 * sc_()) : T.clone(); let best = { d: 1e9 };
+        for (let ax = -2.4; ax <= -0.3; ax += 0.15) for (let el = -1.7; el <= 0.01; el += 0.15) for (let az = -0.6; az <= 0.31; az += 0.15) { Object.assign(st.pose, { armRx: ax, elbowR: el, armRz: az }); root.Blocky.step(jackOut, 0); jackOut.root.updateMatrixWorld(true); const d = gripOf().distanceTo(target) + 0.3 * Math.abs(az); if (d < best.d) best = { d, armRx: ax, elbowR: el, armRz: az }; }
+        Object.assign(st.pose, sv); root.Blocky.step(jackOut, 0); jackOut.root.updateMatrixWorld(true); return best; };
+      jackOut.root.updateMatrixWorld(true); const mouthAt = jackOut.neck.localToWorld(new V3(0, 1.4, 3.6));
+      const ARM = { spoon: solveR(SPOON_AT.clone().add(new V3(0, 0.6, 0))), scoop: solveR(new V3(SX, TOP + 4.2, SZ - 12), spoonDir(0.35, 0.55)), mouth: solveR(mouthAt, spoonDir(1.9, 0.05)) }; G.armFit = ARM;
+      const armP = (b, o) => Object.assign({ armRx: b.armRx, elbowR: b.elbowR, armRz: b.armRz }, o), HOLD = { armRx: -0.75, elbowR: -1.1, armRz: -0.15, spYaw: 0.7, spPitch: 0.3, neckX: 0.2 };
+      const POSE_SCOOP = () => armP(ARM.scoop, { spYaw: 0.35, spPitch: 0.55, neckX: 0.3 }), POSE_MOUTH = () => armP(ARM.mouth, { spYaw: 1.9, spPitch: 0.05, neckX: 0.3 });
+      const mixP = (a, b, k) => { const o = {}; for (const key in b) o[key] = W3(a[key] === undefined ? b[key] : a[key], b[key], k); return o; };
+      const takeSpoon = async () => { Object.assign(st.pose, { spYaw: 0, spPitch: 0 }); await tp(armP(ARM.spoon, { spYaw: 0, spPitch: 0, neckX: 0.3 }), 0.6); holding = true; A && A.blip && A.blip(); await tp(HOLD, 0.5); };
+      const putSpoon = async () => { if (!holding) return; await tp(armP(ARM.spoon, { spYaw: 0, spPitch: 0, neckX: 0.3 }), 0.6); holding = false; load.visible = false; spoon.position.copy(SPOON_AT); spoon.quaternion.identity(); spoon.rotation.y = Math.PI; spoon.scale.setScalar(sc_()); A && A.blip && A.blip(); await tp(SEATED, 0.5); };
+      const scoop = async () => { await tp(POSE_SCOOP(), 0.55); load.visible = true; A && A.blip && A.blip(); await tp(POSE_MOUTH(), 0.7); };
+      const eat = async () => { await tp({ neckX: 0.45 }, 0.2); load.visible = false; A && A.rustle && A.rustle(0.3); level--; setLevel(); paint({ expr: 'smile' }); await tp(HOLD, 0.5); };
+      const spill = async () => {       // (too much, too fast: it falls from the spoon on the way, onto the table and his front)
+        await tp(POSE_SCOOP(), 0.25); load.visible = true; await tp(mixP(POSE_SCOOP(), POSE_MOUTH(), 0.55), 0.15); load.visible = false; A && A.splash && A.splash(0.25);
+        { const tip = spoon.localToWorld(new V3(0, 0, 4.6)); splash.position.set(tip.x, CLOTH + 0.3, tip.z); } splash.visible = true; chin.visible = true; paint({ expr: 'wince' });
+        await tp(POSE_MOUTH(), 0.15); await tp(Object.assign({}, HOLD, { neckX: 0.4 }), 0.5); };
+      let messes = 0; G.bf = { splash, cloth, spoon, bowl };       // (for the tools and tests)
+      // she wipes the spill from where it fell, across the cloth, to the corner of the table nearest her, and takes it up in the cloth there
+      const tbl = M.items.kitchenTable.g.position, TX0 = tbl.x - 40, TX1 = tbl.x + 40, TZ0 = tbl.z - 14, TZ1 = tbl.z + 14;
+      const tableWipe = async () => { if (!splash.visible) return; cloth.visible = true;
+        const gx = gst.x, gz = gst.z, c1 = new V3(Math.abs(gx - TX0) < Math.abs(gx - TX1) ? TX0 + 3 : TX1 - 3, CLOTH + 0.7, Math.abs(gz - TZ0) < Math.abs(gz - TZ1) ? TZ0 + 3 : TZ1 - 3), s0 = splash.position.clone();
+        const stand = x => Math.max(143, Math.min(156, x + 12)); await walkG([[stand(s0.x), SZ - 6]]); await faceG(SX - 6, SZ - 14, 0.3);
+        await armsTo(new V3(s0.x, CLOTH + 4, s0.z), null, 0.5, 0.9); await armsTo(new V3(s0.x, CLOTH + 0.7, s0.z), null, 0.25, 0.9);
+        for (let i = 1; i <= 6; i++) { const k = i / 6, px = W3(s0.x, c1.x, k), pz = W3(s0.z, c1.z, k); await walkG([[stand(px), SZ - 6]]); await armsTo(new V3(px, CLOTH + 0.7, pz), null, 0.2, 0.9); splash.position.set(px, CLOTH + 0.3, pz); splash.scale.setScalar(1 - 0.5 * k); }
+        splash.visible = false; splash.scale.setScalar(1); A && A.rustle && A.rustle(0.4); await armsTo(new V3(c1.x, CLOTH + 4, c1.z), null, 0.35, 0.9); await G.wait(0.15); await walkG([[SX - 22, SZ - 6]]); await faceG(SX, SZ, 0.3); };
       const wipe = async n => {       // she comes across, and wipes his face and his front, and goes back
         stirring = false; await rest(0.3); await walkG([[SX - 22, SZ - 6]]); await faceG(SX, SZ, 0.4);
         await sayW('gerda', n === 1 ? 'Oh, little climber. Slowly, now. There’s no race.' : 'Jack. Slowly. I will not ask a third time.');
         cloth.visible = true; await armsTo(jackOut.neck.localToWorld(new V3(0, 2, 4)), null, 0.6, 0.5);
         for (let i = 0; i < 4; i++) { await armsTo(jackOut.neck.localToWorld(new V3(i % 2 ? 2 : -2, 1, 4)), null, 0.18, 0.5); }
-        await armsTo(jackOut.torso.localToWorld(new V3(0, 12, 4)), null, 0.4, 0.5); chin.visible = false; splash.visible = false; A && A.rustle && A.rustle(0.4); await G.wait(0.2); cloth.visible = false; await rest(0.5);
+        await armsTo(jackOut.torso.localToWorld(new V3(0, 12, 4)), null, 0.4, 0.5); chin.visible = false; A && A.rustle && A.rustle(0.4); await G.wait(0.2);
+        await tableWipe(); cloth.visible = false; await rest(0.5);
         await sayW('jack', n === 1 ? 'Sorry, Gerda.' : 'Slowly. Yes, Gerda.'); paint({ expr: 'shy' });
         await walkG([[STOVE[0], STOVE[1] + 10], [STOVE[0], STOVE[1]]]); await faceG(STOVE[0] - 10, STOVE[1], 0.4); stirring = true; paint({ expr: 'smile' });
       };
       let correctedNow = false, clean = 0;
+      G.hud.objective('Pick up the spoon.'); await ask('Take the spoon'); G.hud.objective(''); await takeSpoon();
       await sayW('gerda', 'Slowly, now. One spoonful at a time, and no hurrying.'); objEat();
       while (level > 0 && !correctedNow) {
         objEat();
@@ -1988,7 +2017,7 @@ function run(G, W, opts) {
       await finishBreakfast();
       // ── the correction: in place: the bowl moved out of reach, he kneels up to the table, and a few firm smacks ──
       async function correction() {
-        await rest(0.3); await walkG([[SX - 22, SZ - 6]]); await faceG(SX, SZ, 0.4); chin.visible = false;
+        await rest(0.3); await walkG([[SX - 22, SZ - 6]]); await faceG(SX, SZ, 0.4); chin.visible = false; await tableWipe(); await putSpoon();
         let kneeling = false;
         const red = await redGuard(async chk => {
           await sayW('gerda', 'That is three, Jack.'); chk();
@@ -2018,7 +2047,7 @@ function run(G, W, opts) {
         // she feeds him the rest
         { const b1 = bowl.position.clone(), b0 = new V3(SX, TOP, SZ - 12); await armsTo(bowl.getWorldPosition(new V3()).add(new V3(0, 3, 0)), null, 0.5, 0.6); for (let i = 1; i <= 20; i++) { const k = ease(i / 20); bowl.position.lerpVectors(b1, b0, k); await G.wait(0.04); } }
         await sayW('gerda', 'Now. Open wide, and I will do it for you.');
-        const spoonG = new THREE.Group(); mk(0.9, 9, 0.9, '#8a6a42', 0, -4.5, 0, spoonG); mk(2.6, 0.7, 3.4, '#9a7a52', 0, -9.2, 0.5, spoonG); const gl = mk(2.2, 0.8, 2.8, '#ebdfbc', 0, -8.7, 0.5, spoonG); spoonG.scale.setScalar(SC * 0.7 * 1.1); spoonG.position.set(0, -6, 0.8); gerda.wrist.add(spoonG); spoon.visible = false;
+        const spoonG = new THREE.Group(); mk(0.9, 9, 0.9, '#8a6a42', 0, -4.5, 0, spoonG); mk(2.6, 0.7, 3.4, '#9a7a52', 0, -9.2, 0.5, spoonG); const gl = mk(2.2, 0.8, 2.8, '#ebdfbc', 0, -8.7, 0.5, spoonG); spoonG.scale.setScalar(SC * 0.7 * 1.1); spoonG.position.set(0, -6, 0.8); gerda.wrist.add(spoonG); spoon.visible = false; holding = false;
         paint({ expr: 'shy' }); const take = level; let k = 0;
         while (level > 0) {
           await armsTo(bowl.getWorldPosition(new V3()).add(new V3(0, 5, 0)), null, 0.5, 0.6); gl.visible = true;
@@ -2031,7 +2060,7 @@ function run(G, W, opts) {
       }
       async function finishBreakfast() {
         if (!correctedNow) { await G.wait(0.5); }
-        spoon.visible = false; load.visible = false; await tp(SEATED, 0.4);
+        await putSpoon(); spoon.visible = false; load.visible = false; await tp(SEATED, 0.4);
         await faceG(SX - 22, SZ - 6, 0.3); await walkG([[SX - 22, SZ - 6]]); await faceG(SX, SZ, 0.4); stirring = false;
         await sayW('gerda', correctedNow ? 'There. All gone. And you will find it is not so hard, with a little patience.' : 'All gone! You see how well you do when you take your time?');
         paint({ expr: 'smile' }); await sayW('gerda', 'Now, down you come, little climber.');
@@ -2040,7 +2069,7 @@ function run(G, W, opts) {
         await sayW('gerda', 'Come along. The hen has been asking after you.');
         await G.fade(true, 1.2);
       }
-      G.updaters = G.updaters.filter(u => u !== stirTick); stool.position.z = stool0; for (const g of [bowl, splash, pail]) scene.remove(g); spoon.parent && spoon.parent.remove(spoon); G.bathPaint = null; st.pose = null; st.guard = null;
+      G.updaters = G.updaters.filter(u => u !== stirTick && u !== spoonTick); stool.position.z = stool0; for (const g of [bowl, splash, pail]) scene.remove(g); spoon.parent && spoon.parent.remove(spoon); G.bathPaint = null; st.pose = null; st.guard = null;
     }
     // The safe word, for a smack that is part of a longer scene: the stop sign is up while the scene is turned to it, and a press ends it at once and gently. `await redGuard(async chk => { ...; chk(); ... })`
     // resolves true if Red was pressed; `chk()` is called between the steps, and before each smack lands.
