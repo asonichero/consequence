@@ -130,7 +130,7 @@
   }
   [['lap', 'Over the knee'], ['table', 'Over the table'], ['stool', 'Kneeling on the stool']].forEach(function (p) { btn('places', p[1], function () {
     if (p[0] === 'lap' && st.implement === 'birch') L.implement('hand');          // (the birch is for the table)
-    if (p[0] === 'stool') L.size(0.7);          // (the size he is at the breakfast table)
+    if (p[0] === 'stool') L.size(0.7 / 1.4 / 0.95);          // (Jack at 0.7, half of Gerda's 1.4, as he wakes in the nursery cot and sits at the breakfast table)
     L.place(p[0], 1.2); L.view(p[0] === 'table' || p[0] === 'stool' ? 'tableBehind' : 'overview'); markP(); if (window.__peSync) window.__peSync(); }, p[0]); });
   function markP() { document.querySelectorAll('#places button').forEach(function (b) { b.classList.toggle('on', b.dataset.k === st.place); }); }
   mark(); markW(); markP();

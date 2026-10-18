@@ -43,10 +43,10 @@ function create(view, opts) {
     renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     renderer.outputEncoding = THREE.sRGBEncoding; renderer.setPixelRatio(Math.min(2, root.devicePixelRatio || 1));
     view.appendChild(renderer.domElement);
-    scene = new THREE.Scene(); scene.background = new THREE.Color(0x14181f); scene.fog = new THREE.Fog(0x14181f, 140, 300);
+    scene = new THREE.Scene(); scene.background = new THREE.Color(0x14181f); scene.fog = new THREE.Fog(0x14181f, 140 * 1.4, 300 * 1.4);
     camera = new THREE.PerspectiveCamera(36, 1, 1, 600);
     controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true; controls.minDistance = 12; controls.maxDistance = 160; controls.maxPolarAngle = Math.PI * 0.495;
+    controls.enableDamping = true; controls.minDistance = 12 * 1.4; controls.maxDistance = 160 * 1.4; controls.maxPolarAngle = Math.PI * 0.495;
     scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x30283a, 0.62));
     const sun = new THREE.DirectionalLight(0xfff0d8, 0.62); sun.position.set(40, 80, 60); scene.add(sun);
     const fc = document.createElement('canvas'); fc.width = fc.height = 32; const fx = fc.getContext('2d');
@@ -55,10 +55,11 @@ function create(view, opts) {
     const ft = new THREE.CanvasTexture(fc); ft.magFilter = THREE.NearestFilter; ft.wrapS = ft.wrapT = THREE.RepeatWrapping; ft.repeat.set(16, 16); ft.encoding = THREE.sRGBEncoding;
     floor = new THREE.Mesh(new THREE.PlaneGeometry(256, 256), new THREE.MeshLambertMaterial({ map: ft })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
   }
-  const stage = new THREE.Group(); scene.add(stage);
+  const VIEW_S = ext ? 1 : B.SCALE.castle;       // (the viewer draws the cast as the castle does: Gerda at 1.4, Jack at 0.95 of that at his full size; in the game the scene places and scales the stage itself)
+  const stage = new THREE.Group(); scene.add(stage); stage.scale.setScalar(VIEW_S);
   // The chair: a plank seat (top at y = 4, where Gerda's thighs rest) and a straight back.
   const LEGH = B.CHAIR.legH, chair = B.makeChair(); if (opts.noChair !== true) stage.add(chair);   // (the same chair stands in the level's room; a floor lowered to meet its legs, and Gerda's shins lengthened by the same amount)
-  if (floor) floor.position.y = -LEGH;
+  if (floor) floor.position.y = -LEGH * VIEW_S;
   let jackFull = opts.jackFull || JACK_FULL;
 
   // ── The cast ────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -633,7 +634,7 @@ function create(view, opts) {
     tableFront: { pos: [38, 22, 24], at: [-4, 8, -4] },       // from beyond the table, looking back along him
     seat: { pos: [-26, 20, 50], at: [0, 8, 6] },              // standing before her, seen from the side
   };
-  function view_(name) { const v = VIEWS[name]; camera.position.set(...v.pos); controls.target.set(...v.at); }
+  function view_(name) { const v = VIEWS[name]; camera.position.set(...v.pos).multiplyScalar(VIEW_S); controls.target.set(...v.at).multiplyScalar(VIEW_S); }
   if (!ext) view_('overview');
   function resize() { if (ext) return; const w = view.clientWidth || 800, h = view.clientHeight || 600; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
   root.addEventListener('resize', resize); resize();
