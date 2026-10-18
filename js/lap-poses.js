@@ -611,10 +611,34 @@ root.LapPoses = {
     50: {
       gerda: {
         hand: {
-          rest: {},
-          raised: {},
-          contactL: {},
-          contactR: {},
+          rest: {
+            torso: { r: [0, 0, 0], p: [-6.5, 0, 5] },
+            armL: { r: [-96, 0, 2] },
+            paddle: { r: [-0.4, 0, 90] },
+            wristR: { r: [0, 0.9, 0] },
+            elbowL: { r: [2, -12, -5] },
+          },
+          raised: {
+            torso: { r: [0, 0, 0], p: [-6.5, 0, 5] },
+            armL: { r: [-96, 0, 2] },
+            paddle: { r: [-0.4, 0, 90] },
+            wristR: { r: [0, 0.9, 0] },
+            elbowL: { r: [2, -12, -5] },
+          },
+          contactL: {
+            torso: { r: [0, 0, 0], p: [-6.5, 0, 5] },
+            armL: { r: [-96, 0, 2] },
+            paddle: { r: [-0.4, 0, 90] },
+            wristR: { r: [0, 0.9, 0] },
+            elbowL: { r: [2, -12, -5] },
+          },
+          contactR: {
+            torso: { r: [0, 0, 0], p: [-6.5, 0, 5] },
+            armL: { r: [-96, 0, 2] },
+            paddle: { r: [-0.4, 0, 90] },
+            wristR: { r: [0, 0.9, 0] },
+            elbowL: { r: [2, -12, -5] },
+          },
         },
         paddle: {
           rest: {},
@@ -643,10 +667,42 @@ root.LapPoses = {
       },
       jack: {
         hand: {
-          rest: {},
-          raised: {},
-          contactL: {},
-          contactR: {},
+          rest: {
+            armR: { r: [-115, 10, 0] },
+            torso: { r: [75, 0, 0] },
+            elbowR: { r: [-50, -5, 5] },
+            armL: { r: [-115, -10, 0] },
+            elbowL: { r: [-50, 5, -5] },
+            neck: { r: [-55, 0, 0] },
+            glutes: { r: [49, 0, 0], p: [0, 2.3, 2] },
+          },
+          raised: {
+            armR: { r: [-115, 10, 0] },
+            torso: { r: [75, 0, 0] },
+            elbowR: { r: [-50, -5, 5] },
+            armL: { r: [-115, -10, 0] },
+            elbowL: { r: [-50, 5, -5] },
+            neck: { r: [-55, 0, 0] },
+            glutes: { r: [49, 0, 0], p: [0, 2.3, 2] },
+          },
+          contactL: {
+            armR: { r: [-115, 10, 0] },
+            torso: { r: [75, 0, 0] },
+            elbowR: { r: [-50, -5, 5] },
+            armL: { r: [-115, -10, 0] },
+            elbowL: { r: [-50, 5, -5] },
+            neck: { r: [-55, 0, 0] },
+            glutes: { r: [49, 0, 0], p: [0, 2.3, 2] },
+          },
+          contactR: {
+            armR: { r: [-115, 10, 0] },
+            torso: { r: [75, 0, 0] },
+            elbowR: { r: [-50, -5, 5] },
+            armL: { r: [-115, -10, 0] },
+            elbowL: { r: [-50, 5, -5] },
+            neck: { r: [-55, 0, 0] },
+            glutes: { r: [49, 0, 0], p: [0, 2.3, 2] },
+          },
         },
         paddle: {
           rest: {},
