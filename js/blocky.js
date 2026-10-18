@@ -591,7 +591,24 @@ function apply() {
   for (const k of ['legL', 'legR']) { const t = this[k].thigh; t.rotation.order = 'ZXY'; t.rotation.y = 0; this[k].knee.rotation.y = 0; this[k].knee.rotation.z = 0; }
   this.torso.rotation.order = 'XYZ'; this.torso.rotation.set(0, 0, 0); this.neck.rotation.y = 0; this.neck.rotation.z = 0; this.hips.rotation.set(0, 0, 0);       // (the trunk, the head's turn and tilt and the hips too: a lean or a turn a scene gave them does not outlast the scene's own asking)
   if (this.after) this.after(this);   // a scene's own additions to the pose (the lap scene's swing and kicks)
+  if (this.gaze) gazeStep(this);       // and where the head is looking, last: it follows its target, and eases back to square when it has none
 }
+
+// Looking at something: `lookAt(rig, target)` (a point, or a function that gives one, or null to look ahead again). The head turns to the target as the rig's own body stands, within what a neck can do,
+// follows it if it moves, and when the look is released it eases back to neutral by itself, so that no look is ever left behind for the scene to remember to undo.
+const _g1 = new THREE.Vector3(), _g2 = new THREE.Vector3();
+function gazeStep(rig) {
+  const g = rig.gaze; let ty = 0, tx = 0;
+  const T = g.target && (typeof g.target === 'function' ? g.target() : g.target);
+  if (T) {
+    rig.neck.getWorldPosition(_g1); rig.root.worldToLocal(_g1); rig.root.worldToLocal(_g2.copy(T)); _g2.sub(_g1);
+    ty = Math.max(-g.maxY, Math.min(g.maxY, Math.atan2(_g2.x, _g2.z))); tx = Math.max(-0.45, Math.min(0.55, Math.atan2(-_g2.y, Math.hypot(_g2.x, _g2.z))));
+  }
+  g.y += (ty - g.y) * g.rate; g.x += (tx - g.x) * g.rate;
+  if (!T && Math.abs(g.y) < 0.002 && Math.abs(g.x) < 0.002) { g.y = g.x = 0; if (!g.target) rig.gaze = null; return; }
+  rig.neck.rotation.y += g.y; rig.neck.rotation.x += g.x;
+}
+function lookAt(rig, target, o) { if (!rig.gaze) { if (!target) return; rig.gaze = { y: 0, x: 0, target: null, maxY: 1.1, rate: 0.12 }; } rig.gaze.target = target || null; if (o) Object.assign(rig.gaze, o); }
 
 // A scene's hook over a rig, with its undoing: `const undo = hook(rig, fn)` puts `fn` in the place of whatever hook the rig had (the one the scene comes after), and `undo()` puts that back, so that a rig that
 // goes on into the next scene still moves as that scene expects.
@@ -656,5 +673,5 @@ const SCALE = { adult: 0.95, gerda: 1.0, castle: 1.4, height: 31, stageY: 5.7 };
 // How far a walking figure's legs turn for the ground it covers: the phase to add for `dist` world units walked by a figure of the given scale, so that every walk, free or scripted, keeps step with the ground the same way
 // (and a figure that stops, or slows, stops stepping). 0.42 per model unit is 0.442 per world unit at an adult's size.
 const stride = (dist, scale) => dist * 0.42 / (scale || SCALE.adult);
-root.Blocky = { SCALE, stride, hook, JACK_EXPR, jackExprIndex, seatFeet, BIRCH, makeBirch, buildCharacter, sideOuter, SIDES, FACES, CHAIR, makeChair, makeJack, makeGerda, setPose, step, POSES, Skin, OUTFITS, paintGerdaInto, paintJackInto, paintGlutesInto, makeGlutes, boxGeo, faceRect };
+root.Blocky = { SCALE, stride, hook, lookAt, JACK_EXPR, jackExprIndex, seatFeet, BIRCH, makeBirch, buildCharacter, sideOuter, SIDES, FACES, CHAIR, makeChair, makeJack, makeGerda, setPose, step, POSES, Skin, OUTFITS, paintGerdaInto, paintJackInto, paintGlutesInto, makeGlutes, boxGeo, faceRect };
 })(typeof window !== 'undefined' ? window : globalThis);

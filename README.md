@@ -30,7 +30,7 @@ The game is played with a thumb: a phone held sideways is the one device it is d
 
 **Skipping.** Skip ends the scene it is pressed in and lands at the start of the next thing the player has to do (a walk, a beat): a skipped wait ends at once, and every 256th gives the frame loop a turn, so that a scene that waits on the player can never freeze the page.
 
-**Characters.** One rig builder (`js/blocky.js`: `makeJack`, `makeGerda`, and `js/cast.js` for the rest of the cast); the cast's sizes are set once in `Blocky.SCALE`. Each frame the rig returns to its standard pose before a scene's own hook (`rig.after`) adds to it (`Blocky.hook(rig, fn)` installs a hook and gives back the undoing), so nothing a scene bent stays bent once the scene stops asking for it.
+**Characters.** One rig builder (`js/blocky.js`: `makeJack`, `makeGerda`, and `js/cast.js` for the rest of the cast); the cast's sizes are set once in `Blocky.SCALE`. Each frame the rig returns to its standard pose before a scene's own hook (`rig.after`) adds to it (`Blocky.hook(rig, fn)` installs a hook and gives back the undoing), so nothing a scene bent stays bent once the scene stops asking for it. A look is `Blocky.lookAt(rig, target)` (a point or a function giving one): the head follows the target within what a neck can do, and when the look is released it eases back to square by itself, so a scene never has to remember to undo it.
 
 ### Prologue: the opening (`game.html`)
 

@@ -214,7 +214,7 @@ function run(G, W, opts) {
       const dx = tx - gst.x, dz = tz - gst.z, d = Math.hypot(dx, dz), n = Math.max(2, Math.ceil(d / (sp * 0.04))), h1 = Math.atan2(dx, dz);
       for (let i = 1; i <= n; i++) { gst.h += angDiff(h1, gst.h) * 0.35; gst.x += dx / n; gst.z += dz / n; gst.ph += 0.42; gst.walk = 1; placeGerda(); if (seen()) { gst.walk = 0; return false; } await G.wait(0.04); }
       gst.walk = 0; return true; }
-    async function gLook(secs, bend) { const n = Math.round(secs / 0.04); for (let i = 1; i <= n; i++) { const k = Math.sin(Math.PI * i / n); gst.bend = bend * Math.min(1, k * 2.2); gst.look = 0.25 * Math.sin(i * 0.2); placeGerda(); if (seen()) { gst.bend = bend; return false; } await G.wait(0.04); } gst.bend = 0; gst.look = 0; return true; }
+    async function gLook(secs, bend) { const n = Math.round(secs / 0.04); for (let i = 1; i <= n; i++) { const k = Math.sin(Math.PI * i / n); gst.bend = bend * Math.min(1, k * 2.2); gst.look = 0.25 * Math.sin(i * 0.2); placeGerda(); if (seen()) { gst.bend = bend; gst.look = 0; return false; } await G.wait(0.04); } gst.bend = 0; gst.look = 0; return true; }
     const quick = d => new Promise(r => setTimeout(r, d));
     let endN = 0;                                                                                           // (the ending's own beats, counted as scene-notes counts them: js/capture-cams.js holds the angles set there)
     const cutK = sp => { endN++; const C = root.CaptureCams, c = C && C.cams[endN]; if (!c) return cutIn(sp);
@@ -709,7 +709,7 @@ function run(G, W, opts) {
         let frames = 0, faded = false;       // (they start walking, and the scene fades out on them)
         for (const [px, pz] of route) for (let n = 0; n < 400 && !faded; n++) { if (++frames === 22) G.fade(true, 1.3).then(() => { faded = true; }); const dx = px - gst.x, dz = pz - gst.z, d = Math.hypot(dx, dz); if (d < 1.2) break; const h1 = Math.atan2(dx, dz); gst.h += angDiff(h1, gst.h) * 0.12; gst.x += Math.sin(gst.h) * 0.9; gst.z += Math.cos(gst.h) * 0.9; gst.ph += 0.4; gst.walk = 0.6; placeGerda(); gerda.root.updateMatrixWorld(true); jackAt(); st.walkN = 1; st.walkPh += 0.3 * 1.4;
           await G.wait(0.04); }
-        gst.walk = 0; st.walkN = 0; st.pose = null; gst.p50 = null;
+        gst.walk = 0; st.walkN = 0; st.pose = null; gst.p50 = null; gst.headY = 0;
       };
       if (opts.ch3after) { cam.restore(); G.updaters = G.updaters.filter(u => u !== lapTick); await aftermath(); await finish('discipline'); return; }       // (the scene on its own, for the scene notes and for tests)
       G.lap = lap; G.fc = cam.fc;       // (for tools and tests)
@@ -1775,9 +1775,7 @@ function run(G, W, opts) {
       bundle.visible = true; gerda.wrist.rotation.x = 0;
       await sayW('jack', 'Then I can work out how to—');
       A && A.latch && A.latch(0.4); const opening = openDoor(doorN, Math.PI / 2, 1.2);
-      { const hp0 = jackOut.neck.getWorldPosition(new V3()), dd = Math.atan2(-294 - hp0.x, -160 - hp0.z); let best = 0.8, bd = -2;       // (he looks at the door: whichever way of turning his head brings his face nearest to it)
-        for (const sg of [0.9, -0.9]) { st.pose.neckY = sg; await G.wait(0.12); jackOut.root.updateMatrixWorld(true); const f = new V3(0, 0, 1).applyQuaternion(jackOut.neck.getWorldQuaternion(new THREE.Quaternion())), d = (f.x * Math.sin(dd) + f.z * Math.cos(dd)) / Math.hypot(f.x, f.z, 1e-6); if (d > bd) { bd = d; best = sg; } }
-        const from = st.pose.neckY; for (let i = 1; i <= 10; i++) { st.pose.neckY = W3(from, best, ease(i / 10)); await G.wait(0.04); } npaint({ expr: 'squint' }); }
+      root.Blocky.lookAt(jackOut, () => gerda.neck.getWorldPosition(new V3())); npaint({ expr: 'squint' });       // (he looks at the door, and then at her wherever she goes: the look follows her, and ends when he stands)
       await opening;
       G.cut({ pos: v(-108.2, 25.6, -277.7), look: v(-295.7, 11.4, -190.7), fov: 52 });
       npaint({ expr: 'shy' });
@@ -1788,7 +1786,7 @@ function run(G, W, opts) {
       npaint({ expr: 'smile' });
       { const wk = walkG([[-200, -228], [-148, -232], [side[0], side[1]]]); await G.wait(0.6); await sayW('gerda', 'Come now, let’s get you dressed.'); await wk; }
       { const h0 = gst.h; for (let i = 1; i <= 12; i++) { gst.h = h0 + angDiff(sideFace, h0) * ease(i / 12); placeGerda(); await G.wait(0.04); } }
-      { const a0 = st.pose.neckY; for (let i = 1; i <= 10; i++) { st.pose.neckY = W3(a0, 0, ease(i / 10)); await G.wait(0.04); } }
+      root.Blocky.lookAt(jackOut, null); await G.wait(0.4);
       // he stands in the cot
       { const from = { q: jackOut.root.quaternion.clone(), p: jackOut.root.position.clone() }, hd = sideFace + Math.PI, Q1 = new THREE.Quaternion().setFromAxisAngle(new V3(0, 1, 0), hd), to = new V3(cot.position.x, 12.2, cot.position.z), n = 32;
         const t0 = st.pose.torso; for (let i = 1; i <= n; i++) { const k = ease(i / n); jackOut.root.quaternion.copy(from.q).slerp(Q1, k); jackOut.root.position.lerpVectors(from.p, to, k); st.pose.torso = W3(t0, 0, k); st.pose.neckX = W3(-0.5, 0.1, k); st.pose.armLx = st.pose.armRx = W3(0.5, 0, k); st.pose.kneeL = st.pose.kneeR = 0.5 * Math.sin(Math.PI * k); await G.wait(0.04); }
