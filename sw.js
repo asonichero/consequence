@@ -1,6 +1,6 @@
 // Service worker: caches the game on first load so it installs and plays offline. Bump VERSION whenever the files change, so installed copies refresh.
 const APP = '0.4.1';      // the version shown beside the build number (the editors read it from here); the game's own badge is in game.html
-const VERSION = 'consequence-v041-305';
+const VERSION = 'consequence-v041-306';
 const FILES = [
   'game.html', 'level.html', 'manifest.webmanifest',
   'js/blocky.js', 'js/cast.js', 'js/audio.js', 'js/farm-layout.js', 'js/farm.js', 'js/game.js', 'js/opening.js', 'js/touchui.js', 'js/market.js', 'js/road.js', 'js/night.js', 'js/correction.js', 'js/chapter4.js', 'js/garden.js', 'js/chapter3.js', 'js/climb.js', 'js/meadow.js', 'js/castle.js', 'js/castle-layout.js', 'js/gerda-pose.js', 'js/gerda-pose-half.js', 'js/capture-cams.js', 'js/castlewalk.js', 'js/debuglib.js', 'js/buildbadge.js', 'js/menus.js', 'js/pain.js', 'js/lap-poses.js', 'js/lap.js', 'js/level.js',
