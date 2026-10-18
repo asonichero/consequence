@@ -51,9 +51,6 @@ const CSS = `
   body.fixedcam #tui #tCam { display: none !important; }       /* (the scene holds the camera: there is nothing for the button to turn) */
   @media (max-height: 420px) { #tJump, body[data-mode="beat"] #tui #tAct { width: 68px; height: 68px; right: calc(var(--tsr) + 18px); bottom: calc(var(--tsb) + 18px); } #tAct, body[data-mode="beat"] #tui #tDrop { right: calc(var(--tsr) + 98px); bottom: calc(var(--tsb) + 26px); width: 58px; height: 58px; } #tDrop { right: calc(var(--tsr) + 94px); bottom: calc(var(--tsb) + 92px); width: 54px; height: 54px; } #tStick { width: 112px; height: 112px; left: calc(var(--tsl) + 16px); bottom: calc(var(--tsb) + 18px); } #tRun { right: calc(var(--tsr) + 28px); bottom: calc(var(--tsb) + 98px); width: 48px; height: 48px; } #tSneak { left: calc(var(--tsl) + 44px); bottom: calc(var(--tsb) + 140px); width: 48px; height: 48px; } #tCam { top: calc(var(--tst) + 66px); width: 48px; height: 48px; } }`;
 let UI = null;
-// Tips: the old keyboard hints, kept as no-ops while the scenes stop calling them. `clean` still takes a key name out of a line, so that none can reach the screen.
-const Tips = { mobile: () => true, once: () => false,
-  clean: s => typeof s !== 'string' ? s : s.replace(/\s*\((?:E|Q|C|V|Space|Shift)(?:\s*(?:or|\/)\s*(?:E|Q|C|V|Space))*(?: at the tree)?\)/g, '').replace(/\b(?:press|hold) (?:E|Q|C|V|Space|Shift)\b,? ?(?:to |and )?/gi, '') };
 const svg = name => '<svg viewBox="0 0 24 24">' + (ICONS[name] || '') + '</svg>';
 function build() {
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
@@ -64,12 +61,12 @@ function build() {
   const $ = id => document.getElementById(id), B = { jump: $('tJump'), act: $('tAct'), drop: $('tDrop'), run: $('tRun'), sneak: $('tSneak'), cam: $('tCam') };
   const ui = { el, stick: { x: 0, y: 0 }, run: false, sneak: false, on: {}, keys: null, B, state: {} };
   const DEF = { jump: ['jump', 'Jump'], act: ['act', 'Do'], drop: ['drop', 'Drop'], run: ['run', 'Run'], sneak: ['sneak', 'Sneak'], cam: ['camera', ''] };
-  const drawFace = k => { const s = ui.state[k], b = B[k]; const lab = s.label && (k === 'jump' || k === 'act' || k === 'drop' || k === 'run' || k === 'sneak') ? s.label : '';
+  const drawFace = k => { const s = ui.state[k], b = B[k]; const lab = s.label && (k === 'jump' || k === 'run' || k === 'sneak' || ((k === 'act' || k === 'drop') && s.enabled)) ? s.label : '';       // (a Context button with nothing to do says nothing)
     b.classList.toggle('long', lab.length > 8); b.innerHTML = svg(k === 'act' && s.label === 'Look' ? 'eye' : s.icon) + (lab ? '<span class="' + (lab.length > 8 ? 'l2' : lab.length > 6 ? 'l7' : '') + '">' + lab + '</span>' : ''); b.title = s.title || s.label || ''; };
   const drawState = k => { const s = ui.state[k], b = B[k], rg = s.ring == null ? null : Math.max(0, Math.min(1, s.ring)); b.classList.toggle('off', !s.enabled); b.classList.toggle('on', !!s.on); b.classList.toggle('ready', (s.ready == null ? k === 'act' || k === 'drop' : !!s.ready) && s.enabled);       // (the Context button and its Alt are gold whenever there is something here for them to do)
      b.classList.toggle('ask', !!s.ask && s.enabled); b.classList.toggle('ring', rg !== null); if (rg !== null) b.style.setProperty('--ring', rg.toFixed(3)); b.setAttribute('aria-disabled', s.enabled ? 'false' : 'true'); };
   const draw = k => { if (ui.state[k]) { drawFace(k); drawState(k); } };
-  ui.set = (k, o) => { const s = ui.state[k]; if (!s) return; let face = false, st_ = false; for (const p in o) if (s[p] !== o[p]) { s[p] = o[p]; if (p === 'icon' || p === 'label' || p === 'title') face = true; else st_ = true; } if (face) drawFace(k); if (face || st_) drawState(k); };
+  ui.set = (k, o) => { const s = ui.state[k]; if (!s) return; let face = false, st_ = false; for (const p in o) if (s[p] !== o[p]) { s[p] = o[p]; if (p === 'icon' || p === 'label' || p === 'title' || (p === 'enabled' && (k === 'act' || k === 'drop'))) face = true; else st_ = true; } if (face) drawFace(k); if (face || st_) drawState(k); };
   ui.setRun = on => { ui.run = on; if (ui.keys) ui.keys.run = on; ui.set('run', { on }); };
   ui.setSneak = on => { ui.sneak = on; ui.set('sneak', { on }); };
   ui.show = on => { el.style.display = on ? 'block' : 'none'; };
@@ -96,5 +93,5 @@ function build() {
     el.classList.toggle('hasStick', o.stick !== false); el.style.display = 'block'; return ui; };
   return ui;
 }
-root.Tips = Tips; root.TouchUI = { create(o) { if (!UI) UI = build(); return UI.reset(o); }, ICONS };
+root.TouchUI = { create(o) { if (!UI) UI = build(); return UI.reset(o); }, ICONS };
 })(typeof window !== 'undefined' ? window : globalThis);

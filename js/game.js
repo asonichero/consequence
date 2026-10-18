@@ -70,7 +70,7 @@ function create(els) {
     document.head.appendChild(st);
     const el = document.createElement('div'); el.id = 'hud'; el.innerHTML = '<div class="hObj" style="display:none"></div><div class="hToast"></div><div class="hMeters"></div>'; document.body.appendChild(el);
     const hObj = el.children[0], hToast = el.children[1], hMeters = el.children[2], meters = {}; let toastT = 0;
-    const clean = t => root.Tips && root.Tips.clean ? root.Tips.clean(t) : t;
+    const clean = t => typeof t !== 'string' ? t : t.replace(/\s*\((?:E|Q|C|V|Space|Shift)(?:\s*(?:or|\/)\s*(?:E|Q|C|V|Space))*(?: at the tree)?\)/g, '').replace(/\b(?:press|hold) (?:E|Q|C|V|Space|Shift)\b,? ?(?:to |and )?/gi, '');       // (a key's name never reaches the screen, whatever a scene writes)
     G.hud = {
       objective(t) {                                                       // a line, or a list of { text, done } (those done are struck through)
         if (Array.isArray(t)) { const k = JSON.stringify(t); if (hObj.dataset.k !== k) { hObj.dataset.k = k; hObj.textContent = ''; t.forEach((it, i) => { if (i) hObj.appendChild(document.createTextNode('  ·  ')); const sp = document.createElement('span'); sp.textContent = clean(it.text); if (it.done) sp.className = 'done'; hObj.appendChild(sp); }); } hObj.style.display = 'block'; return; }

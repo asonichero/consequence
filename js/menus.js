@@ -247,6 +247,11 @@ function pmShow() { if (pmOpen() || !playable()) return; pmWas = G.paused; G.pau
 function pmBack() { if (setCard.parentNode === pm) $('settings').appendChild(setCard); $('pmMain').style.display = ''; }
 function pmHide() { pm.classList.remove('on'); document.body.classList.remove('pm'); pmBack(); if (!pmWas) G.pause(false); }
 $('menuBtn').onclick = pmShow; $('pmResume').onclick = pmHide;
+// How to play: the controls as a thumb finds them, drawn with the buttons' own icons.
+{ const IC = root.TouchUI.ICONS, ico = (n, gold) => '<i' + (gold ? ' class="gold"' : '') + '><svg viewBox="0 0 24 24">' + (IC[n] || '') + '</svg></i>';
+  $('helpRows').innerHTML = [[ '<i>stick</i>', 'The stick, left: walk'], ['<i>drag</i>', 'Drag the screen: look around'], [ico('act', true), 'The gold button: do what is here (it says what)'], [ico('drop'), 'Beside it: put down, pick up, or the other answer'],
+    [ico('jump'), 'Jump, or climb where there is something to climb'], [ico('run'), 'Run (hold it)'], [ico('sneak'), 'Sneak (tap to switch on and off)'], [ico('camera'), 'Camera: closer or further'], ['<i style="background:#c4141c;border-color:#fff">RED</i>', 'Red stops a correction at once, with nothing held against you'], ['<i>skip</i>', 'Skip ends the scene you are in']].map(r => '<div>' + r[0] + '<span>' + r[1] + '</span></div>').join('');
+  $('pmHelp').onclick = () => { $('helpBox').classList.add('on'); }; $('helpClose').onclick = () => $('helpBox').classList.remove('on'); }
 $('pmSettings').onclick = () => { $('pmMain').style.display = 'none'; pm.appendChild(setCard); };
 $('pmTitle').onclick = async () => { if (await askYes('Return to the title?', 'Your last save point is kept; progress within this scene is lost.', 'Return to the title')) location.reload(); };
 root.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (pmOpen()) { pmHide(); e.preventDefault(); } else if (playable()) { pmShow(); e.preventDefault(); } });

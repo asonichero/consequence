@@ -73,11 +73,13 @@
     #menu { gap: 8px; } #menu button { padding: 9px 18px; font-size: 16px; min-width: 200px; }
     .card { padding: 14px 20px; font-size: 14px; line-height: 1.45; } .card h2 { font-size: 18px; margin-bottom: 6px; } .row { margin: 5px 0; } .row.stack { margin: 7px 0; }
     #notice .card, #settings .card, #pmenu .card, #confirmBox .card { max-height: calc(100vh - 20px); overflow-y: auto; }
+    #settingsCard { max-width: 640px; width: 94vw; } #settingsCard .cols { columns: 2; column-gap: 28px; } .cols .row { break-inside: avoid; }
     body[data-mode="explore"] #subs { left: calc(var(--sl) + 140px); right: calc(var(--sr) + 172px); } body[data-mode="beat"] #subs { right: calc(var(--sr) + 172px); }       /* (the thumbs are smaller too, so the lane between them is wider) */
   }
   #confirmBox { background: rgba(8,10,14,0.82); align-items: center; justify-content: center; z-index: 70; } #confirmBox .card button { display: block; width: 100%; margin: 10px 0 0; }
   .row input[type=checkbox] { width: 26px; height: 26px; flex: none; } label.row { cursor: pointer; min-height: 40px; }
   @media (pointer: coarse) { #dev #dlibBtn { padding: 10px 14px; font-size: 14px; } #dev select { padding: 8px; font-size: 14px; } }
+  #helpBox { background: rgba(8,10,14,0.86); align-items: center; justify-content: center; z-index: 68; } #helpBox .card { max-height: calc(100vh - 16px); overflow-y: auto; } #helpRows { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 22px; margin: 8px 0 4px; } #helpRows div { display: flex; align-items: center; gap: 12px; font-size: 15px; line-height: 1.3; } #helpRows i { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.85); background: rgba(20,22,30,0.72); display: flex; align-items: center; justify-content: center; font-style: normal; font-size: 11px; } #helpRows i svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 2.1; stroke-linejoin: round; stroke-linecap: round; } #helpRows i.gold { background: #6b5a2a; border-color: #f0d98a; } @media (max-width: 560px) { #helpRows { grid-template-columns: 1fr; } } @media (max-height: 420px) { #helpRows { gap: 3px 18px; } #helpRows div { font-size: 14px; gap: 10px; } #helpRows i { width: 34px; height: 34px; font-size: 10px; } #helpRows i svg { width: 19px; height: 19px; } #helpBox .card { width: min(720px, 94vw); max-width: 720px; } }
   #bugChip { position: fixed; left: 50%; top: calc(var(--st) + 8px); transform: translateX(-50%); z-index: 60; display: none; background: rgba(90,20,24,0.92); border: 1px solid #e07070; color: #ffe0e0; border-radius: 8px; padding: 7px 14px; font-size: 14px; max-width: 70vw; } #bugChip.on { display: block; }
   #bugBox { background: rgba(8,10,14,0.82); align-items: center; justify-content: center; z-index: 71; } #bugBox .card button { display: block; width: 100%; margin: 10px 0 0; } #bugBox pre { margin: 8px 0 0; padding: 8px 10px; background: #0d1018; border: 1px solid #3a3f52; border-radius: 6px; font: 12px/1.4 monospace; white-space: pre-wrap; word-break: break-word; max-height: 36vh; overflow: auto; user-select: text; -webkit-user-select: text; }
   #pmenu { background: rgba(8,10,14,0.78); align-items: center; justify-content: center; z-index: 50; } #pmenu #bReset { display: none; } #pmenu .card button { display: block; width: 100%; margin: 10px 0 0; }
@@ -114,11 +116,12 @@
 </div>
 <div id="chCard"><div id="chNum"></div><div id="chRule"></div><div id="chTitle"></div></div>
 <div id="dev" class="screen-dev"><select id="levelSel" style="display:none" title="Level select (does not touch your save)"><option value="">Level select&hellip;</option><option value="opening">Prologue: the opening</option><option value="market">Chapter One: Market Day &mdash; the cow</option><option value="road">Chapter One: the market road</option><option value="cart">Chapter One: the Peddler's cart</option><option value="nightH">Chapter One: night, humble</option><option value="nightC">Chapter One: night, cheeky</option><option value="nightB">Chapter One: night, brash (the birch)</option><option value="corrH">Chapter One: the correction, humble</option><option value="corrC">Chapter One: the correction, cheeky</option><option value="corrB">Chapter One: the correction, brash (the birch)</option><option value="gardenH">Chapter One: planting, humble</option><option value="gardenC">Chapter One: planting, cheeky</option><option value="gardenB">Chapter One: planting, brash</option><option value="ch3">Chapter Two: The Climb &mdash; waking, through to the end</option><option value="ch3d">Chapter Two: dress and the knife</option><option value="climb">Chapter Two: the climb itself</option><option value="meadow">Chapter Two: the cloud meadow</option><option value="castlehall">Chapter Two: inside the castle (the hall)</option><option value="castlecatch">Chapter Two: Gerda catches Jack (the capture)</option><option value="castle">Test: explore the castle</option><option value="ch3open">Chapter Three: the kitchen (the box on the table)</option><option value="ch3nursery">Chapter Three: the nursery</option><option value="ch3disc">Chapter Three: the nursery correction</option><option value="ch3dress">Chapter Three: dressed at the table</option><option value="ch3chores">Ch3: the hen chores</option><option value="ch3bath">Ch3: bath time</option><option value="ch3bed">Ch3: bedtime</option><option value="ch4dream">Ch4: the dream</option><option value="ch4wake">Ch4: waking, and breakfast</option><option value="ch4breakfast">Ch4: breakfast</option><option value="cards">Test: the chapter title cards</option></select></div>
-<div id="ver">v0.4.1 &middot; build 290 &middot; 2026-10-18</div>
+<div id="ver">v0.4.1 &middot; build 291 &middot; 2026-10-18</div>
 
 <div id="settings" class="screen">
-  <div class="card narrow">
+  <div class="card narrow" id="settingsCard">
     <h2>Settings</h2>
+    <div class="cols">
     <div class="row stack"><span>Master volume</span><input type="range" id="vMaster" min="0" max="100"></div>
     <div class="row stack"><span>Music</span><input type="range" id="vMusic" min="0" max="100"></div>
     <div class="row stack"><span>Sound effects</span><input type="range" id="vSfx" min="0" max="100"></div>
@@ -126,9 +129,14 @@
     <div class="row stack"><span>Dialogue speed</span><input type="range" id="vSpeed" min="50" max="200"></div>
     <label class="row"><span>Advance dialogue automatically</span><input type="checkbox" id="cAuto"></label>
     <label class="row"><span>Subtitles</span><input type="checkbox" id="cSubs"></label>
+    </div>
     <p style="font-size:13px;opacity:.8">Safe word: <b>Red</b>. In any correction scene the Red button ends it at once, with nothing held against you.</p>
     <button id="bReset">Delete saved game</button><button class="primary" id="bBack">Back</button>
   </div>
+</div>
+
+<div id="helpBox" class="screen">
+  <div class="card"><h2>How to play</h2><div id="helpRows"></div><button class="primary" id="helpClose">Back to the game</button></div>
 </div>
 
 <div id="bugChip">Something went wrong &mdash; tap for details</div>
@@ -144,6 +152,7 @@
   <div class="card narrow" id="pmMain">
     <h2>Paused</h2>
     <button class="primary" id="pmResume">Resume</button>
+    <button id="pmHelp">How to play</button>
     <button id="pmSettings">Settings</button>
     <button id="pmTitle">Return to title</button>
   </div>
