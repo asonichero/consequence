@@ -14,6 +14,8 @@ A read of every line of dialogue and staging comment, in play order (the opening
 | Dressing scene, scene notes | choosing a face repainted his clothes as at the start of the scene | the face is painted on what he is wearing now |
 | The safe word | the notice promises Red in every scene; the breakfast correction and the bath's smack had none | both have the Red button; pressing it ends the smack at once, gently ("Red! No more, please!" / "Alright, Jack. I hear you. That is an end to it.") |
 | The "Debug: chores…" panel | shown to every player in the hen's room | shown only with `?debug` or from the level select |
+| Jack alone | his bath monologue, the castle hall and chest remarks, the box and the tunic, bedtime and waking were spoken aloud | all are thoughts (the dashed box); the breakfast's already were |
+| Nursery truth/lie choice | he never said the truth he chose | he says it, then goes on |
 | Key names on screen | "press E", "press Space", "(Q)" in objectives and toasts | none anywhere; a test keeps it so |
 
 ## Open (author's call)
@@ -24,10 +26,10 @@ A read of every line of dialogue and staging comment, in play order (the opening
 - *Things that vanish.* The satchel, the flask and his boots disappear after the nursery; only the knife is mentioned ("keeps his knife"). Suggestion: "Your satchel and flask will be waiting by the cot."
 
 **Voice**
-- *Thoughts spoken aloud.* Only the breakfast uses `G.think`. Jack's reflections in the bath ("I came up here looking for one small thing to carry home…" to "It's a strange thing, to be known so exactly"), the castle hall remarks, and the closing thoughts of Chapter Three are spoken aloud while he is alone. They would read as the thoughts they are in the same dashed box as the breakfast's.
+- ~~*Thoughts spoken aloud.*~~ (done) Only the breakfast uses `G.think`. Jack's reflections in the bath ("I came up here looking for one small thing to carry home…" to "It's a strange thing, to be known so exactly"), the castle hall remarks, and the closing thoughts of Chapter Three are spoken aloud while he is alone. They would read as the thoughts they are in the same dashed box as the breakfast's.
 - *Gerda's register.* The Chapter Four dressing ("Step out for me, sweetheart. One foot, then the other…") is sing-song beside Chapter Three's firmer, warmer dressing. Suggestion: "Shorts first. One foot, then the other." / "There. Off it comes." / "There. That's the night off you." / "And last, the little shorts. In you go." / "There. Dressed, and looking more yourself."
 - *Repeated or reused lines.* "Mother will eat every word" ×3 (chapter3, meadow, garden); "lies at the top" ×4 (chapter3, climb ×3); Mother's tier-two line reused verbatim by Gerda in the nursery correction; "for me" about thirteen times, "little climber" thirteen, "Good boy" nine.
-- *Jack in the nursery.* He never speaks the option he picks at the truth/lie choice, and Gerda's replies to the lies quote things he did not say. Suggestion: speak the chosen line (the truth: "I came to take something. We've nothing at home, and Mother's frantic.").
+- ~~*Jack in the nursery.*~~ (done: he speaks the line he picks) He never speaks the option he picks at the truth/lie choice, and Gerda's replies to the lies quote things he did not say. Suggestion: speak the chosen line (the truth: "I came to take something. We've nothing at home, and Mother's frantic.").
 - *"Four storeys up"* understates a beanstalk to the clouds (her lines at the nursery truth/lie choice and in the discipline).
 - *Names.* Gerda says "Jack" before she has been told it (the book page with his name draws no reaction).
 - *The lid.* "…with the lid shut" when the chest is open; "nothing in your hands but my book" after the book has been dropped.

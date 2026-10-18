@@ -129,6 +129,7 @@ function run(G, W, opts) {
 
     // ── The kitchen table: things to look at, crumbs to take or leave, the loaf that is not his, and then footsteps overhead. ──
     const sayW = async (who, text) => { const o = who === 'gerda' ? gst : st; o.talk = 1; if (who === 'jack' && gerda) gst.listen = 1; try { await G.say(who, text); } finally { o.talk = 0; if (who === 'jack' && gerda) gst.listen = 0; } };       // (she talks with her free hand, and he with a little head and hand: from the first word to the last)
+    const thinkW = text => G.think(text);       // (what he thinks, alone: the dashed box, and no one hears it; his mouth stays still)
     const say = t => G.caption('jack', t), later = (ms, f) => setTimeout(f, ms), tableG = M.items.kitchenTable.g, pantryG = M.items.pantry.g;
     function storyTick(dt) {
       const Hj = HEIGHT * SC * st.s;
@@ -520,20 +521,20 @@ function run(G, W, opts) {
       G.cut({ pos: v(P.x - 20, 14, P.z - 28), look: v(C0.x - 3, 4, C0.z), fov: 40 });
       { const x0 = st.pos.x, z0 = st.pos.z, h0 = st.heading, n = 24; for (let i = 1; i <= n; i++) { const k = ease(i / n); st.pos.x = W3(x0, P.x, k); st.pos.z = W3(z0, P.z, k); st.heading = h0 + angDiff(hh, h0) * k; st.walkN = 1; st.walkPh += 0.5; await G.wait(0.04); } st.walkN = 0; st.heading = hh; }
       st.pose = { armLx: -0.15, armLz: 0.3, armRx: -0.15, armRz: -0.3, torso: 0, neckX: 0, neckY: 0 };
-      await sayW('jack', 'A chest. No lock on it, no key. Nothing to say it isn’t for opening.');
+      await thinkW('A chest. No lock on it, no key. Nothing to say it isn’t for opening.');
       for (let i = 1; i <= 14; i++) { const k = ease(i / 14); st.pose.armLx = st.pose.armRx = W3(-0.15, -1.7, k); st.pose.neckX = -0.15 * k; await G.wait(0.04); }
       A && A.thud && A.thud(0.15);
       for (let i = 1; i <= 34; i++) { const k = ease(i / 34); K.lid.rotation.x = -1.95 * k; st.pose.armLx = st.pose.armRx = W3(-1.7, -2.5, Math.min(1, k * 1.6)); await G.wait(0.04); }
       for (let i = 1; i <= 12; i++) { const k = ease(i / 12); st.pose.armLx = st.pose.armRx = W3(-2.5, -0.5, k); st.pose.neckX = W3(-0.15, 0.55, k); await G.wait(0.04); }
       const at3 = o => ch.localToWorld(new V3(...o));
       G.cut({ pos: v(C0.x - 12, 12, C0.z - 8), look: v(C0.x, 3, C0.z), fov: 46 });
-      await sayW('jack', 'Clothes. Folded and put away with care.');
-      await sayW('jack', 'And they get smaller as they go: a man’s shirt, a boy’s, a little one’s, a baby’s.');
-      await sayW('jack', 'Someone kept every size.');
+      await thinkW('Clothes. Folded and put away with care.');
+      await thinkW('And they get smaller as they go: a man’s shirt, a boy’s, a little one’s, a baby’s.');
+      await thinkW('Someone kept every size.');
       { const bp = K.brush.getWorldPosition(new V3()); G.cut({ pos: v(bp.x - 1.8, bp.y + 11.3, bp.z + 10.7), look: bp, fov: 40 }); }
-      await sayW('jack', 'A hairbrush. A tiny one, with a handle worn pale where a thumb has held it.');
+      await thinkW('A hairbrush. A tiny one, with a handle worn pale where a thumb has held it.');
       { const bp = K.book.getWorldPosition(new V3()); G.cut({ pos: v(bp.x - 3, bp.y + 14, bp.z - 5), look: bp, fov: 40 }); }
-      await sayW('jack', 'And a book.');
+      await thinkW('And a book.');
       // he takes the book up, and opens it
       scene.attach(K.book); const b0 = K.book.position.clone(), q0 = K.book.quaternion.clone(), qT = new THREE.Quaternion().setFromAxisAngle(v(0, 0, 1), 0.7).multiply(q0), H = v(P.x + 2.4, 0.56 * Hj, P.z - 0.4);
       G.cut({ pos: v(P.x - 3, 0.85 * Hj, P.z - 17), look: v(P.x + 1.5, 0.55 * Hj, P.z - 0.2), fov: 38 });
@@ -587,7 +588,7 @@ function run(G, W, opts) {
       shotJ(); W.paintJack(jackOut, { expr: 2 }); headTo(0.55);
       // the truth is told, and he grows, to half her size, from the moment he begins to speak
       const growing = (async () => { A && A.blip && A.blip(); for (let i = 1; i <= 48; i++) { st.s = W3(0.4, 0.5, ease(i / 48)); await G.wait(0.05); } st.s = 0.5; })();
-      await jline('We’ve nothing at home, and Mother’s frantic. I thought one small thing from a house this rich would make the climb worth it.'); await growing;
+      await jline(TRUTH); await jline('We’ve nothing at home, and Mother’s frantic. I thought one small thing from a house this rich would make the climb worth it.'); await growing;
       shotG(12.3, 12.1, 6.5);
       await gline(['Honest, and at the first asking. I’ll say that for you.', 'The truth, after one fib. It is a start.', 'Two lies, and then the truth. You are getting there, slowly.', 'Three lies, and the truth only when you had run out of the other kind.'][lies]);
       headTo(-0.45);                                                                              // (he looks up at her again for the second line)
@@ -1502,21 +1503,21 @@ function run(G, W, opts) {
       camSide(); paint({ expr: 'smile' }); A && A.splash && A.splash(0.6); await tw(LAY, 1.6, -0.6, 0.3);
       await sayW('jack', 'Oh, that is warm.');
       await G.wait(0.5); camB4();
-      await sayW('jack', 'I came up here looking for one small thing to carry home, and I have spent the day being measured instead.');
+      await thinkW('I came up here looking for one small thing to carry home, and I have spent the day being measured instead.');
       camB5();
-      await sayW('jack', 'My boots were tight in the corridor, and I told myself it was nothing. Then in the nursery, once I had told her the truth, I was bigger. I felt it.');
+      await thinkW('My boots were tight in the corridor, and I told myself it was nothing. Then in the nursery, once I had told her the truth, I was bigger. I felt it.');
       camSide(); paint({ expr: 'shy' });
-      await sayW('jack', 'And today, with the hen: every fright, every spill, I came away a little smaller. I can’t swear to it. But I was smallest when I lied, and tallest when I was honest.');
+      await thinkW('And today, with the hen: every fright, every spill, I came away a little smaller. I can’t swear to it. But I was smallest when I lied, and tallest when I was honest.');
       camB7();
-      await sayW('jack', 'It isn’t the castle that does it. It’s how I behave.');
+      await thinkW('It isn’t the castle that does it. It’s how I behave.');
       camB8();
-      await sayW('jack', 'Mother shouts, and it’s over in a moment, and all I keep is what she called me. Idle. Liar. Good for nothing.');
+      await thinkW('Mother shouts, and it’s over in a moment, and all I keep is what she called me. Idle. Liar. Good for nothing.');
       camB9(); paint({ expr: 'smile' });
-      await sayW('jack', 'Gerda says what I did. Plainly. The dish, the lid, the hen. Every one of them something I could put right.');
+      await thinkW('Gerda says what I did. Plainly. The dish, the lid, the hen. Every one of them something I could put right.');
       camSide();
-      await sayW('jack', 'And when I did put it right, she said so. Mother has never once said so.');
+      await thinkW('And when I did put it right, she said so. Mother has never once said so.');
       camB11();
-      await sayW('jack', '…It’s a strange thing, to be known so exactly.');
+      await thinkW('…It’s a strange thing, to be known so exactly.');
       await G.wait(0.6);
       // what he does with the time she has given him
       camWide();
@@ -1693,8 +1694,8 @@ function run(G, W, opts) {
         await walkTo([[-294, -150]]); gerda.root.visible = false; { const d = M.doors.find(q => q.axis === 'z' && Math.abs(q.fixed + 160) < 3 && Math.abs(q.c + 294) < 8); if (d) { const a = d.lg.rotation.y, n = 30; d.og.userData.noCollide = true; for (let i = 1; i <= n; i++) { d.lg.rotation.y = W3(a, 0, ease(i / n)); await G.wait(0.04); } A && A.thud && A.thud(0.3); A && A.latch && A.latch(0.4); } }
         // Jack, in the moonlight
         G.cut({ pos: v(-141.3, 47, -256.5), look: v(-131.3, 14.3, -275.9), fov: 34 }); await G.wait(1.2);
-        await sayW('jack', 'Mother will be worried… or angry…'); await G.wait(0.4);
-        npaint({ expr: 'squint' }); await sayW('jack', 'I will go down tomorrow.');
+        await thinkW('Mother will be worried… or angry…'); await G.wait(0.4);
+        npaint({ expr: 'squint' }); await thinkW('I will go down tomorrow.');
         await G.wait(1.6); G.cut({ pos: v(-219.5, 24.1, -197.4), look: v(-150, 14, -265), fov: 50 }); await G.wait(2.2);
         await G.fade(true, 2.4);
       }
@@ -1729,9 +1730,9 @@ function run(G, W, opts) {
       npaint({ expr: 'wince' }); await sayW('jack', 'Mother…'); await G.wait(0.6);
       npaint({ expr: 'shy' }); st.pose.neckY = 0; await G.wait(0.8);
       G.cut({ pos: v(-142, 38.1, -216.7), look: v(-120.5, 15.7, -273.3), fov: 42 });
-      await sayW('jack', 'It was a dream. It was only a dream.'); await G.wait(0.4);
-      await sayW('jack', 'But she was right. I cannot go home with nothing in my hands.');
-      await sayW('jack', 'Not again.');
+      await thinkW('It was a dream. It was only a dream.'); await G.wait(0.4);
+      await thinkW('But she was right. I cannot go home with nothing in my hands.');
+      await thinkW('Not again.');
       // ── he sits up, braced for a sting, and none comes ──
       await G.wait(0.6);
       { const a = 1, foot = 17, push = async (s0, s1, secs) => { const n = Math.round(secs / 0.04); for (let i = 1; i <= n; i++) { const s = W3(s0, s1, ease(i / n)); quilt.children.forEach(c => { c.scale.x = s; c.position.x = foot - 12 * s; }); await G.wait(0.04); } };
@@ -1740,21 +1741,21 @@ function run(G, W, opts) {
         await up(0.5, 0.9); await G.wait(0.6); st.pose.neckX = -0.1;       // (a breath held, bracing)
         await up(1.45, 1.1); await G.wait(0.5); }
       npaint({ expr: 'squint' }); await G.wait(0.8);
-      await sayW('jack', '…Nothing.'); await sayW('jack', 'I thought it would hurt. Last night, or the dream, or both. But there’s no sting. No ache at all.');
-      await sayW('jack', 'That’s strange.');
+      await thinkW('…Nothing.'); await thinkW('I thought it would hurt. Last night, or the dream, or both. But there’s no sting. No ache at all.');
+      await thinkW('That’s strange.');
       // ── he looks about the room ──
       G.cut({ pos: v(-104, 30, -266.4), look: v(-155.8, 24.9, -250.1), fov: 75 });
       { const sweep = async (to, secs) => { const from = st.pose.neckY, n = Math.round(secs / 0.04); for (let i = 1; i <= n; i++) { st.pose.neckY = W3(from, to, ease(i / n)); await G.wait(0.04); } };
         await sweep(0.8, 1.2); await G.wait(0.3); await sweep(-0.8, 1.8); await G.wait(0.3); await sweep(0, 0.9); }
       npaint({ expr: 'shy' });
-      await sayW('jack', 'It feels different from yesterday. It isn’t bigger, and it isn’t smaller.');
-      await sayW('jack', 'It’s only… less looming. Almost comforting.');
+      await thinkW('It feels different from yesterday. It isn’t bigger, and it isn’t smaller.');
+      await thinkW('It’s only… less looming. Almost comforting.');
       npaint({ expr: 'wince' }); { for (let k = 0; k < 2; k++) { for (let i = 1; i <= 8; i++) { st.pose.neckY = 0.45 * Math.sin(Math.PI * i / 8) * (k ? -1 : 1); await G.wait(0.04); } } st.pose.neckY = 0; }       // (shaking the thought away)
-      await sayW('jack', 'No. Don’t be soft.');
+      await thinkW('No. Don’t be soft.');
       G.cut({ pos: v(-121.4, 33.8, -246.3), look: v(-130.4, 13, -275.2), fov: 36 });
       { const down = async secs => { const from = st.pose.torso, n = Math.round(secs / 0.04); for (let i = 1; i <= n; i++) { st.pose.torso = W3(from, 0, ease(i / n)); st.pose.neckX = W3(-0.5, 0.1, ease(i / n)); st.pose.armLx = st.pose.armRx = W3(0.5, 0, ease(i / n)); await G.wait(0.04); } };
         await down(1.1); npaint({ expr: 'shy' }); }
-      await sayW('jack', 'Do as I’m told. Be good, and hope she trusts me enough to leave me be for a while.');
+      await thinkW('Do as I’m told. Be good, and hope she trusts me enough to leave me be for a while.');
       // ── the door, and Gerda with his day clothes ──
       const doorN = M.doors.find(q => q.axis === 'z' && Math.abs(q.fixed + 160) < 3 && Math.abs(q.c + 294) < 8);
       const openDoor = async (d, ang, secs) => { if (!d) return; let sgn = 1; for (const sg of [1, -1]) { d.lg.rotation.y = sg * ang; d.og.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(d.lg), c = (bb.min.z + bb.max.z) / 2; if (c < d.fixed) { sgn = sg; break; } } d.lg.rotation.y = 0; d.og.userData.noCollide = true;       // (it opens into the room)
@@ -1773,7 +1774,7 @@ function run(G, W, opts) {
       const side = cW(0, 17), sideFace = Math.atan2(cot.position.x - side[0], cot.position.z - side[1]);
       Object.assign(gst, { x: -294, z: -150, h: Math.PI, y: 0, seated: 0, kneel: 0, walk: 0, reach: 0, lreach: 0, bend: 0, look: 0.2, headY: 0, p50: null, hold: 0, alive: 1, sniff: 0 }); placeGerda(); root.Blocky.step(gerda, 0); gerda.root.visible = true;
       bundle.visible = true; gerda.wrist.rotation.x = 0;
-      await sayW('jack', 'Then I can work out how to—');
+      await thinkW('Then I can work out how to—');
       A && A.latch && A.latch(0.4); const opening = openDoor(doorN, Math.PI / 2, 1.2);
       { const hp0 = jackOut.neck.getWorldPosition(new V3()), dd = Math.atan2(-294 - hp0.x, -160 - hp0.z); let best = 0.8, bd = -2;       // (he looks at the door: whichever way of turning his head brings his face nearest to it)
         for (const sg of [0.9, -0.9]) { st.pose.neckY = sg; await G.wait(0.12); jackOut.root.updateMatrixWorld(true); const f = new V3(0, 0, 1).applyQuaternion(jackOut.neck.getWorldQuaternion(new THREE.Quaternion())), d = (f.x * Math.sin(dd) + f.z * Math.cos(dd)) / Math.hypot(f.x, f.z, 1e-6); if (d > bd) { bd = d; best = sg; } }
@@ -2096,10 +2097,10 @@ function run(G, W, opts) {
       gerda.root.updateMatrixWorld(true); G.cut({ pos: bx.localToWorld(new V3(0.06, 5.04, -4.26)), look: gerda.neck.localToWorld(new V3(0, 2.5, 0)).add(new V3(0.06, -1.16, -0.36)), fov: 54 });      // (from inside, up at where her face will be)
       const carry = (async () => { for (let i = 0; i < 9; i++) { A && A.thud && A.thud(0.22 + 0.04 * (i % 3)); bx.rotation.z = 0.025 * Math.sin(i * 1.7); bx.position.y = TOP + 0.5 * Math.abs(Math.sin(i * 1.3)); await G.wait(0.45); } A && A.thud && A.thud(0.6); bx.rotation.z = 0; bx.position.y = TOP; })();
       await G.wait(1.2);
-      await sayW('jack', 'Something’s moving. The box... she’s carrying me.');
-      await sayW('jack', 'The sides feel closer than they did. Tighter. As if the box has shrunk around me.');
+      await thinkW('Something’s moving. The box... she’s carrying me.');
+      await thinkW('The sides feel closer than they did. Tighter. As if the box has shrunk around me.');
       await carry; await G.wait(0.5);
-      await sayW('jack', 'Did I sleep? How long have I been in here?');
+      await thinkW('Did I sleep? How long have I been in here?');
       // 2. from inside the box: the lid is lifted, and the light comes up with it; Gerda, in her work clothes, above
       jackOut.root.visible = false; gst.bend = 0.3; gst.reach = 1.15; gst.lreach = 1.15; placeGerda(); await G.wait(0.7); A && A.latch && A.latch(0.6);
       for (let i = 1; i <= 64; i++) { const k = ease(i / 64); box.lid.rotation.x = -1.95 * k; f.style.opacity = 1 - Math.min(1, k * 1.2); gst.bend = W3(0.3, 0.1, k); placeGerda(); await G.wait(0.04); }
@@ -2133,14 +2134,14 @@ function run(G, W, opts) {
       { const x0 = st.pos.x, z0 = st.pos.z, x1 = clothes.position.x - 2.3, z1 = clothes.position.z, n = 44; for (let i = 1; i <= n; i++) { const k = ease(i / n); st.pos.x = x0 + (x1 - x0) * k; st.pos.z = z0 + (z1 - z0) * k; st.heading = Math.atan2(clothes.position.x - st.pos.x, clothes.position.z - st.pos.z); st.walkN = 1; st.walkPh += 0.5; await G.wait(0.04); } st.walkN = 0; st.heading = Math.atan2(clothes.position.x - st.pos.x, clothes.position.z - st.pos.z); }       // (right up to them, facing them)
       await G.wait(0.4);
       for (let i = 1; i <= 16; i++) { const k = ease(i / 16); st.pose.neckX = 0.45 * k; st.pose.armRx = W3(-0.15, -0.9, k); st.pose.armRz = W3(-0.3, -0.05, k); await G.wait(0.04); }       // (he takes the tunic's collar between finger and thumb)
-      await sayW('jack', 'Linen. Stitched by careful hands.');
+      await thinkW('Linen. Stitched by careful hands.');
       W.paintJack(jackOut, { expr: 1 });
-      await sayW('jack', 'A child’s tunic. Laces at the collar, a round neck, the seams doubled for wear.');
-      await sayW('jack', 'Soft green, and made so that someone else can do it up for you.');
-      await sayW('jack', 'Someone not trusted with buttons or belts. Someone like me, in her eyes.');
+      await thinkW('A child’s tunic. Laces at the collar, a round neck, the seams doubled for wear.');
+      await thinkW('Soft green, and made so that someone else can do it up for you.');
+      await thinkW('Someone not trusted with buttons or belts. Someone like me, in her eyes.');
       for (let i = 1; i <= 12; i++) { const k = i / 12; st.pose.armRx = W3(-0.9, -0.15, k); st.pose.neckX = W3(0.45, -0.1, k); await G.wait(0.04); }
       A && A.blip && A.blip(); await G.wait(0.5);
-      await sayW('jack', 'Well, she won’t get me in those!');
+      await thinkW('Well, she won’t get me in those!');
       if (opts.ch3notes) { await finish('ch3open'); return; }
       // out, and on the table: his
       st.pose = null; st.camA = Math.PI * 0.75; st.pitch = 0.45; st.zoom = 1; camPos.set(0, 0, 0);       // (the camera comes in from the south-west, clear of the open box)
@@ -2162,11 +2163,11 @@ function run(G, W, opts) {
     const wait = G.wait, walkTo = async (tx, tz, secs) => { const x0 = st.pos.x, z0 = st.pos.z, n = Math.max(2, Math.round(secs / 0.04)); st.heading = Math.atan2(tx - x0, tz - z0); for (let i = 1; i <= n; i++) { const k = i / n; st.pos.x = x0 + (tx - x0) * k; st.pos.z = z0 + (tz - z0) * k; st.walkN = 1; st.walkPh += 10.9 * Math.pow(st.s, -0.35) * 0.55 * 0.04 * 1.4; await wait(0.04); } st.walkN = 0; };
     st.pos.set(0, 0, 94); st.heading = Math.PI; G.cut({ pos: v(4, 2.4, 60), look: v(0, 2.4, 86), fov: 34 });                 // (it opens on Jack, coming in; the hall is shown once, when he looks up at it)
     f.style.transition = ''; G.fade(false, 1.6); W.paintJack(jackOut, { expr: 1 }); const wk = walkTo(0, 76, 4.2); await wait(1.4);
-    await sayW('jack', 'Who lives in a place like this?');
+    await thinkW('Who lives in a place like this?');
     G.cut({ pos: v(-3, 1.6, 101), look: v(0, 24, 62), fov: 58 }); const rv = G.shot({ pos: v(-3, 1.6, 101), look: v(0, 118, 12), fov: 58 }, 6, 'inOut');
-    await sayW('jack', 'A table set for one, and a hall you could lose a village in.'); await rv;
+    await thinkW('A table set for one, and a hall you could lose a village in.'); await rv;
     G.cut({ pos: v(3, 2.7, 64), look: v(0, 2.7, 76), fov: 32 }); await wait(0.8);
-    await sayW('jack', 'There has to be something here I can carry home. Something Mother can’t argue with.');
+    await thinkW('There has to be something here I can carry home. Something Mother can’t argue with.');
     await wait(0.4); const kk = st.s, d0 = 92 * kk; await G.shot({ pos: v(0, 15 * SC * kk + Math.sin(0.5) * d0, st.pos.z + d0 * Math.cos(0.5)), look: v(0, 15 * SC * kk, st.pos.z), fov: 48 }, 1.6, 'inOut');
     await wk; G.skipping = false; st.scene = false; st.jumpReq = st.actReq = st.putReq = false; for (const k in keys) keys[k] = false; stick.x = stick.y = 0; st.walkN = 0; st.vy = 0; st.lockT = 0; G.setMode('explore'); G.hideLine && G.hideLine(); st.heading = Math.PI; st.camA = Math.PI / 2; camPos.set(0, 0, 0);
   });
