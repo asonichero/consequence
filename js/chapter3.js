@@ -178,7 +178,7 @@ async function runScene(G, W, opts) {
     async function leave() {
       st.leaving = true; G.hud.reset(); ui.show(false); G.setMode('cutscene'); st.act = null; ja.speed = 0;
       st.heading = 0; jackIn.root.quaternion.setFromAxisAngle(v(0, 1, 0), 0); await tween(0.8, (k, e) => { int.doorLeaf.rotation.y = lerp(0, -1.9, e); }); A_ && A_.latch && A_.latch();
-      while (st.pos.z < 86) { st.pos.z += 0.7; jackIn.root.position.set(st.pos.x, 0, st.pos.z); ja.speed = 22; ja.phase += 0.3; await G.wait(0.04); }
+      while (st.pos.z < 86) { st.pos.z += 0.7; jackIn.root.position.set(st.pos.x, 0, st.pos.z); ja.speed = 22; ja.phase += B.stride(0.7); await G.wait(0.04); }
       jackIn.root.visible = false; ja.speed = 0; await G.wait(0.6);
       A_ && A_.stopMusic && A_.stopMusic(2.5); await G.fade(true, 1.8); A_ && A_.ambience({ wind: 0, birds: 0, fire: 0 });
       root.removeEventListener('keydown', kd); root.removeEventListener('keyup', ku); el.removeEventListener('pointerdown', pd); el.removeEventListener('pointermove', pm); el.removeEventListener('pointerup', pu); el.removeEventListener('pointercancel', pu); el.removeEventListener('wheel', wheel);
@@ -197,7 +197,7 @@ async function runScene(G, W, opts) {
         if (dir.lengthSq() > 0) {
           dir.normalize(); st.heading = turn(st.heading, Math.atan2(dir.x, dir.z), Math.min(1, dt * 9));
           const sp = (keys.run ? 48 : 24) * SC, nx = st.pos.x + Math.sin(st.heading) * sp * dt, nz = st.pos.z + Math.cos(st.heading) * sp * dt;
-          if (!blocked(nx, st.pos.z)) st.pos.x = nx; if (!blocked(st.pos.x, nz)) st.pos.z = nz; ja.speed = 24; ja.phase += sp * dt * 0.42 / 0.95;
+          if (!blocked(nx, st.pos.z)) st.pos.x = nx; if (!blocked(st.pos.x, nz)) st.pos.z = nz; ja.speed = 24; ja.phase += B.stride(sp * dt);
         } else ja.speed = 0;
       }
       if (hop.y > 0 || hop.vy > 0) { hop.vy -= 420 * SC * dt; hop.y += hop.vy * dt; if (hop.y <= 0) { hop.y = 0; hop.vy = 0; } } ja.air = hop.y > 0.01; ui.set('jump', { label: 'Jump', icon: 'jump', enabled: canHop() });
@@ -216,7 +216,7 @@ async function runScene(G, W, opts) {
       const d = ZOOMS[st.zoom].d, p = st.pitch, at = v(st.pos.x, 15 * SC, st.pos.z);
       const want = v(clamp(at.x + Math.sin(st.yaw) * Math.cos(p) * d, -70, 70), clamp(at.y + Math.sin(p) * d, 4, 56), clamp(at.z + Math.cos(st.yaw) * Math.cos(p) * d, -70, 70));
       if (camPos.lengthSq() === 0) camPos.copy(want); else camPos.lerp(want, Math.min(1, dt * 10)); camLook.copy(at);
-      G.cut({ pos: camPos, look: camLook, fov: 48 });
+      G.follow({ pos: camPos, look: camLook, fov: 48 });
     };
     G.updaters.push(tick); G.chapter3 = { st, interact };
     objective(); await G.fade(false, 1.4);
@@ -266,7 +266,7 @@ async function runScene(G, W, opts) {
       const want = Math.atan2(to.x - jackIn.root.position.x, to.z - jackIn.root.position.z), stp = Math.min(d, speed * 0.04); heading.y = turn(heading.y, want, 0.3);
       jackIn.root.quaternion.setFromAxisAngle(v(0, 1, 0), heading.y); jackIn.root.position.x += Math.sin(heading.y) * stp; jackIn.root.position.z += Math.cos(heading.y) * stp;
       const onBed = jackIn.root.position.x > -57 && jackIn.root.position.x < -11 && jackIn.root.position.z > 52 && jackIn.root.position.z < 72; jackIn.root.position.y = lerp(jackIn.root.position.y, onBed ? BED_Y : 0, 0.35);
-      ja.speed = speed * 0.95; ja.phase += stp * 0.42; await G.wait(0.04);
+      ja.speed = speed * 0.95; ja.phase += B.stride(stp); await G.wait(0.04);
     }
     ja.speed = 0;
   };
@@ -312,7 +312,7 @@ async function runScene(G, W, opts) {
   // ── 9. He goes back inside. ──
   G.cut({ pos: v(70, 30, 70), look: v(34, 16, 26), fov: 50 }, () => { aOut.hold = 0; aOut.bow = 0; jackOut.root.position.set(40, 0, 44); jackOut.root.rotation.y = Math.PI; });
   { let h = Math.PI; const to = v(36, 0, 28); for (;;) { const d = Math.hypot(to.x - jackOut.root.position.x, to.z - jackOut.root.position.z); if (d < 1) break; const stp = Math.min(d, 22 * 0.04); h = turn(h, Math.atan2(to.x - jackOut.root.position.x, to.z - jackOut.root.position.z), 0.3); jackOut.root.rotation.y = h; jackOut.root.position.x += Math.sin(h) * stp; jackOut.root.position.z += Math.cos(h) * stp; aOut.speed = 22; aOut.phase += stp * 0.42; await G.wait(0.04); } }
-  { let h = Math.PI; for (let i = 0; i < 40; i++) { jackOut.root.position.z -= 0.35; aOut.speed = 20; aOut.phase += 0.3; await G.wait(0.04); } }
+  { let h = Math.PI; for (let i = 0; i < 40; i++) { jackOut.root.position.z -= 0.35; aOut.speed = 20; aOut.phase += B.stride(0.35); await G.wait(0.04); } }
   jackOut.root.visible = false; aOut.speed = 0;
   { const t0 = G.t; await tween(0.7, (k, e) => { ext.doorLeaf.rotation.y = lerp(-1.9, 0, e); }); A_ && A_.thwack && A_.thwack(0.3, true, 0.5); }
   await G.wait(1.4);

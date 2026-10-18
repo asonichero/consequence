@@ -112,7 +112,7 @@ async function run(G, choices, opts) {
       let d = Math.hypot(q.x - rig.root.position.x, q.z - rig.root.position.z);
       while (d > 1.2) {
         const ang = Math.atan2(q.x - rig.root.position.x, q.z - rig.root.position.z), step = Math.min(d, speed * 0.04);
-        rig.root.rotation.y = turn(rig.root.rotation.y, ang, 0.35); rig.root.position.x += Math.sin(ang) * step; rig.root.position.z += Math.cos(ang) * step; a.speed = speed * 0.95; a.phase += step * 0.42 * (a.shuffle ? 1.4 : 1);
+        rig.root.rotation.y = turn(rig.root.rotation.y, ang, 0.35); rig.root.position.x += Math.sin(ang) * step; rig.root.position.z += Math.cos(ang) * step; a.speed = speed * 0.95; a.phase += B.stride(step) * (a.shuffle ? 1.4 : 1);
         await G.wait(0.04); d = Math.hypot(q.x - rig.root.position.x, q.z - rig.root.position.z);
       }
     }

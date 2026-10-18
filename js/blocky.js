@@ -653,5 +653,8 @@ function makeBirch() {
 // The sizes of the cast, set once: an ordinary adult (Jack at full size, his mother, the merchant, the peddler) stands at 0.95 of the model's own scale and Gerda at 1.0; in her castle everything is 1.4 times that again
 // (`height`: the model's own height in pixels at the cottage's 100%; `stageY`: how high a seated figure's hips rest on the cottage's chair).
 const SCALE = { adult: 0.95, gerda: 1.0, castle: 1.4, height: 31, stageY: 5.7 };
-root.Blocky = { SCALE, hook, JACK_EXPR, jackExprIndex, seatFeet, BIRCH, makeBirch, buildCharacter, sideOuter, SIDES, FACES, CHAIR, makeChair, makeJack, makeGerda, setPose, step, POSES, Skin, OUTFITS, paintGerdaInto, paintJackInto, paintGlutesInto, makeGlutes, boxGeo, faceRect };
+// How far a walking figure's legs turn for the ground it covers: the phase to add for `dist` world units walked by a figure of the given scale, so that every walk, free or scripted, keeps step with the ground the same way
+// (and a figure that stops, or slows, stops stepping). 0.42 per model unit is 0.442 per world unit at an adult's size.
+const stride = (dist, scale) => dist * 0.42 / (scale || SCALE.adult);
+root.Blocky = { SCALE, stride, hook, JACK_EXPR, jackExprIndex, seatFeet, BIRCH, makeBirch, buildCharacter, sideOuter, SIDES, FACES, CHAIR, makeChair, makeJack, makeGerda, setPose, step, POSES, Skin, OUTFITS, paintGerdaInto, paintJackInto, paintGlutesInto, makeGlutes, boxGeo, faceRect };
 })(typeof window !== 'undefined' ? window : globalThis);

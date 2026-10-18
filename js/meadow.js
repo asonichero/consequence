@@ -184,7 +184,7 @@ function run(G, W) {
       place();
       if (st.free) {
         const kk = st.kk, d = ZOOMS[st.zoom].d * kk, at = v(st.pos.x, st.y + 15 * SC * kk, st.pos.z), want = v(at.x + Math.cos(st.camA) * d * Math.cos(st.pitch), Math.max(3 * kk, at.y + Math.sin(st.pitch) * d), at.z + Math.sin(st.camA) * d * Math.cos(st.pitch));
-        if (camPos.lengthSq() === 0) camPos.copy(want); else camPos.lerp(want, Math.min(1, dt * 8)); camLook.copy(at); G.cut({ pos: camPos, look: camLook, fov: 48 });
+        if (camPos.lengthSq() === 0) camPos.copy(want); else camPos.lerp(want, Math.min(1, dt * 8)); camLook.copy(at); G.follow({ pos: camPos, look: camLook, fov: 48 });
       }
     };
     const cleanup = () => { root.removeEventListener('keydown', kd); root.removeEventListener('keyup', ku); el.removeEventListener('wheel', wheel); el.removeEventListener('pointerdown', pd); el.removeEventListener('pointermove', pm); el.removeEventListener('pointerup', pu); el.removeEventListener('pointercancel', pu); G.updaters = G.updaters.filter(u => u !== tick); G.hud.reset(); ui.destroy(); jackOut.after = wasAfter; jackOut.root.scale.setScalar(SC); camera.near = nearOld; camera.updateProjectionMatrix(); };

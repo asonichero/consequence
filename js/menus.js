@@ -26,6 +26,15 @@ const toTitle = () => {
   $('dev').style.display = 'block';
 };
 
+// A scene that trips must not do it silently on a phone, where there is no console: a small red chip says so (it never stops play), and a tap shows what happened, to report.
+{ let last = '', n = 0;
+  const benign = m => /ResizeObserver|play\(\) request|The operation was aborted|AudioContext|NotAllowedError|Script error|\[object Object\]/.test(m);
+  const note = m => { m = String(m || '').slice(0, 900); if (!m || benign(m) || m === last) return; last = m; n++; $('bugText').textContent = m; $('bugChip').classList.add('on'); };
+  root.addEventListener('error', e => note((e.message || 'error') + (e.filename ? '\n' + e.filename.split('/').slice(-2).join('/') + ':' + e.lineno : '')));
+  root.addEventListener('unhandledrejection', e => note(e.reason && (e.reason.stack || e.reason.message) || e.reason));
+  $('bugChip').onclick = () => { $('bugChip').classList.remove('on'); $('bugBox').classList.add('on'); };
+  $('bugClose').onclick = () => $('bugBox').classList.remove('on'); $('bugTitle').onclick = () => location.reload(); }
+
 // A yes-or-no of the game's own (the browser's dialogs are small, ugly and awkward under a thumb): resolves true on the yes.
 const askYes = (title, text, yes) => new Promise(res => {
   const box = $('confirmBox'), end = v => { box.classList.remove('on'); $('cfYes').onclick = $('cfNo').onclick = null; res(v); };
@@ -243,12 +252,19 @@ $('pmTitle').onclick = async () => { if (await askYes('Return to the title?', 'Y
 root.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (pmOpen()) { pmHide(); e.preventDefault(); } else if (playable()) { pmShow(); e.preventDefault(); } });
 setInterval(() => document.body.classList.toggle('inplay', playable() && !pmOpen()), 150);
 
+// The phone's Back button opens the pause menu during play (it would otherwise leave the page, and the scene with it); at the title it goes as it always did, one step later.
+try { history.replaceState({ g: 0 }, ''); history.pushState({ g: 1 }, ''); } catch (e) { /* no history here */ }
+root.addEventListener('popstate', () => { if (playable() && !pmOpen()) { pmShow(); try { history.pushState({ g: 1 }, ''); } catch (e) { /* no history here */ } } else if (pmOpen()) { pmHide(); try { history.pushState({ g: 1 }, ''); } catch (e) { /* no history here */ } } });
+
 // The phone held upright: the page puts up a "turn it sideways" card, and the story waits behind it (and goes on when it is turned back).
 { const upright = root.matchMedia('(orientation: portrait) and (max-width: 820px) and (pointer: coarse)'); let heldByTurn = false;
   const onTurn = () => { if (upright.matches) { if (!G.paused && playable()) { G.pause(true); heldByTurn = true; } } else if (heldByTurn) { heldByTurn = false; if (!pmOpen()) G.pause(false); } };
   if (upright.addEventListener) upright.addEventListener('change', onTurn); else if (upright.addListener) upright.addListener(onTurn); onTurn(); }
+// The screen stays awake while a story is told (a scene can go a long while with no touch), and wakes the lock again when the page comes back to the front.
+let keepAwake = null; const holdScreen = () => { try { if (navigator.wakeLock && !keepAwake) navigator.wakeLock.request('screen').then(l => { keepAwake = l; l.addEventListener('release', () => { keepAwake = null; }); }, () => {}); } catch (e) { /* not allowed here */ } };
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !['title', 'notice'].includes(G.mode)) holdScreen(); });
 // On a phone, the game takes the whole screen, and asks for it to stay sideways, the first time a game is begun (where the browser lets it).
-const goWide = () => { try { if (!root.matchMedia('(pointer: coarse)').matches || root.matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) return; const d = document.documentElement, f = d.requestFullscreen || d.webkitRequestFullscreen; if (f && !document.fullscreenElement) { const r = f.call(d, { navigationUI: 'hide' }); const lock = () => { try { const o = root.screen && root.screen.orientation; if (o && o.lock) o.lock('landscape').catch(() => {}); } catch (e) { /* not allowed here */ } }; if (r && r.then) r.then(lock, () => {}); else lock(); } } catch (e) { /* not allowed here */ } };
+const goWide = () => { holdScreen(); try { if (!root.matchMedia('(pointer: coarse)').matches || root.matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) return; const d = document.documentElement, f = d.requestFullscreen || d.webkitRequestFullscreen; if (f && !document.fullscreenElement) { const r = f.call(d, { navigationUI: 'hide' }); const lock = () => { try { const o = root.screen && root.screen.orientation; if (o && o.lock) o.lock('landscape').catch(() => {}); } catch (e) { /* not allowed here */ } }; if (r && r.then) r.then(lock, () => {}); else lock(); } } catch (e) { /* not allowed here */ } };
 
 // Settings controls.
 const vol = [['vMaster', 'master'], ['vMusic', 'music'], ['vSfx', 'sfx'], ['vVoice', 'voice']];

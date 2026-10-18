@@ -378,7 +378,7 @@ function playLoop(G, W, opts) {
       st.vy -= GRAV * dt; st.y += st.vy * dt; const gnd = surfaceAt(st.pos.x, st.pos.z); if (st.y <= gnd) { st.y = gnd; st.vy = 0; st.grounded = true; } else st.grounded = false;
       for (const it of items) if (!it.carried && st.y < it.top - 2) { const p = pushOut(it, st.pos.x, st.pos.z, 5); if (p) { st.pos.x = p.x; st.pos.z = p.z; } }
       ja.air = !st.grounded;
-      st.speedN = vel.length() / SC; ja.speed = st.speedN * 0.8; ja.phase += dt * st.speedN * 0.42;
+      st.speedN = vel.length() / SC; ja.speed = st.speedN * 0.8; ja.phase += B.stride(st.speedN * SC * dt);
       const running = st.speedN > RUNNING && !carrying;
       // The cow.
       const hp = haltPt(), J = v(st.pos.x, 0, st.pos.z), before = cow.pos.clone(); cow.moved = false;
@@ -415,7 +415,7 @@ function playLoop(G, W, opts) {
       // The camera drifts round to look along the road, unless the player has just turned it: so W follows the bends.
       if (st.speedN > 2 && !drags.size && performance.now() - st.dragAt > 1800) { const nr = R.near(st.pos.x, st.pos.z), c = R.at(nr.s); if (nr.d < 40) st.yaw = turn(st.yaw, Math.atan2(c.tx, c.tz) + Math.PI, Math.min(1, dt * 0.9)); }
       // The camera: always centred on Jack; the canopy that would come between is hidden.
-      const goal = camGoal(); camPos.lerp(goal, Math.min(1, dt * 8)); look.set(st.pos.x, st.y + 15 * SC, st.pos.z); G.cut(spec);
+      const goal = camGoal(); camPos.lerp(goal, Math.min(1, dt * 8)); look.set(st.pos.x, st.y + 15 * SC, st.pos.z); G.follow(spec);
       cullFrame++; if (cullFrame % 2 === 0) W.cull(camPos, look, st.pos);
       // The HUD.
       const t = nearTie(16), it = !st.carry && nearestItem(13), pace = st.speedN < 0.5 ? 'Still' : running ? 'Running' : st.sneak ? 'Sneaking' : 'Walking';
@@ -546,8 +546,8 @@ async function trade(G, W, res) {
   const PP = spot(-50, 14), JJ = spot(-76, -2), jw = [v(J0.x, 0, J0.z), spot(-30, 34), JJ];                    // Jack backs away, round the cow, while she is led to the shafts
   pa.speed = 12; ja.speed = 22;
   for (let i = 0; i < 110; i++) {
-    { const u = (i + 1) / 110, k = u * 2, seg = Math.min(1, Math.floor(k)), f = k - seg, q = jw[seg].clone().lerp(jw[seg + 1], f), ang = Math.atan2(jw[seg + 1].x - jw[seg].x, jw[seg + 1].z - jw[seg].z); jack.root.position.set(q.x, 0, q.z); jack.root.rotation.y = turn(jack.root.rotation.y, ang, 0.3); ja.phase += 0.4; }
-    P.x += (beside.x - P.x) * 0.05; P.z += (beside.z - P.z) * 0.05; pa.phase += 0.3; peddler.root.rotation.y = turn(peddler.root.rotation.y, Math.atan2(slot.x - P.x, slot.z - P.z), 0.15);
+    { const u = (i + 1) / 110, k = u * 2, seg = Math.min(1, Math.floor(k)), f = k - seg, q = jw[seg].clone().lerp(jw[seg + 1], f), ang = Math.atan2(jw[seg + 1].x - jw[seg].x, jw[seg + 1].z - jw[seg].z); ja.phase += B.stride(Math.hypot(q.x - jack.root.position.x, q.z - jack.root.position.z)); jack.root.position.set(q.x, 0, q.z); jack.root.rotation.y = turn(jack.root.rotation.y, ang, 0.3); }
+    { const px = P.x, pz = P.z; P.x += (beside.x - P.x) * 0.05; P.z += (beside.z - P.z) * 0.05; pa.phase += B.stride(Math.hypot(P.x - px, P.z - pz)); } peddler.root.rotation.y = turn(peddler.root.rotation.y, Math.atan2(slot.x - P.x, slot.z - P.z), 0.15);
     cow.pos.x += (slot.x - cow.pos.x) * 0.05; cow.pos.z += (slot.z - cow.pos.z) * 0.05; cow.heading = turn(cow.heading, ca, 0.07); cowM.position.set(cow.pos.x, 0, cow.pos.z); cowM.rotation.y = cow.heading;
     await G.wait(0.04);
   }
@@ -561,7 +561,7 @@ async function trade(G, W, res) {
   pa.point = 0.5; pa.lean = 1; A && A.thwack(0.2, true, 0.35); await G.wait(1.6); pa.point = 0; pa.lean = 0;
   // The Peddler takes her place by the cow's head; Jack waits back along the road, facing her.
   { const pstart = v(P.x, 0, P.z); pa.speed = 12;
-    for (let i = 0; i < 60; i++) { const u = smooth((i + 1) / 60); P.x = pstart.x + (PP.x - pstart.x) * u; P.z = pstart.z + (PP.z - pstart.z) * u; pa.phase += 0.3; peddler.root.rotation.y = turn(peddler.root.rotation.y, Math.atan2(JJ.x - P.x, JJ.z - P.z), 0.15); jack.root.rotation.y = turn(jack.root.rotation.y, Math.atan2(PP.x - JJ.x, PP.z - JJ.z), 0.15); await G.wait(0.04); } }
+    for (let i = 0; i < 60; i++) { const u = smooth((i + 1) / 60), px = P.x, pz = P.z; P.x = pstart.x + (PP.x - pstart.x) * u; P.z = pstart.z + (PP.z - pstart.z) * u; pa.phase += B.stride(Math.hypot(P.x - px, P.z - pz)); peddler.root.rotation.y = turn(peddler.root.rotation.y, Math.atan2(JJ.x - P.x, JJ.z - P.z), 0.15); jack.root.rotation.y = turn(jack.root.rotation.y, Math.atan2(PP.x - JJ.x, PP.z - JJ.z), 0.15); await G.wait(0.04); } }
   pa.speed = 0; jack.root.rotation.y = Math.atan2(PP.x - JJ.x, PP.z - JJ.z); peddler.root.rotation.y = Math.atan2(JJ.x - P.x, JJ.z - P.z);
   // The last exchange, shot clear of the cow: over Jack's shoulder at the Peddler, over hers at Jack.
   const after = {
@@ -578,7 +578,7 @@ async function trade(G, W, res) {
   G.cut(after.wide); pa.lean = 0;
   { const away = v(-t.x, 0, -t.z), ang = Math.atan2(away.x, away.z); ja.lead = false; ja.hand = 0;
     for (let i = 0; i < 12; i++) { jack.root.rotation.y = turn(jack.root.rotation.y, ang, 0.35); await G.wait(0.04); }
-    ja.speed = 40; for (let i = 0; i < 90; i++) { jack.root.position.addScaledVector(away, 1.1); ja.phase += 0.55; await G.wait(0.04); } ja.speed = 0; }
+    ja.speed = 40; for (let i = 0; i < 90; i++) { jack.root.position.addScaledVector(away, 1.1); ja.phase += B.stride(1.1); await G.wait(0.04); } ja.speed = 0; }
   await G.wait(0.6);
   A && A.stopMusic(2.5); await G.fade(true, 2.2); A && A.ambience({ wind: 0, birds: 0, fire: 0 });
   G.updaters = G.updaters.filter(u => u !== cullTick);

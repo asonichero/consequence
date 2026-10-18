@@ -463,14 +463,14 @@ function run(G, W, opts) {
       // the camera: behind him (never snapping back), or through his eyes
       if (st.fp) {
         const eye = v(st.pos.x, st.y + 27 * SC * s, st.pos.z), d = v(-Math.cos(st.camA) * Math.cos(st.fpPitch), -Math.sin(st.fpPitch), -Math.sin(st.camA) * Math.cos(st.fpPitch));
-        camPos.copy(eye).addScaledVector(d, -0.01); camLook.copy(eye).addScaledVector(d, 10); G.cut({ pos: camPos, look: camLook, fov: 72 });
+        camPos.copy(eye).addScaledVector(d, -0.01); camLook.copy(eye).addScaledVector(d, 10); G.follow({ pos: camPos, look: camLook, fov: 72 });
       } else {
         const d = ZOOMS[st.zoom].d * s, at = v(st.pos.x, st.y + 15 * SC * s, st.pos.z), dirv = v(Math.cos(st.camA) * Math.cos(st.pitch), Math.sin(st.pitch), Math.sin(st.camA) * Math.cos(st.pitch));
         let reach = d, p = v(0, 0, 0); for (let u = 4 * s; u <= d; u += Math.max(1, 2 * s)) { p.copy(at).addScaledVector(dirv, u); p.y = Math.max(p.y, 1.2 * s); if (camBlocked(p, s)) { reach = Math.max(4 * s, u - 3 * s); break; } }
         const want = at.clone().addScaledVector(dirv, reach); want.y = Math.max(want.y, 1.2 * s);
         { let rm = null; for (const r of M.rooms || []) if (st.pos.x > r.x0 && st.pos.x < r.x1 && st.pos.z > r.z0 && st.pos.z < r.z1 && (!rm || (r.x1 - r.x0) * (r.z1 - r.z0) < (rm.x1 - rm.x0) * (rm.z1 - rm.z0))) rm = r;
           if (rm) { want.x = clamp(want.x, rm.x0 + 3, rm.x1 - 3); want.z = clamp(want.z, rm.z0 + 3, rm.z1 - 3); want.y = Math.min(want.y, rm.h - 9); } }       // (the camera never leaves the room he is in: its walls, and its ceiling)                       // (the camera slides along the floor, never below it, and tilts up to take in the ceiling)
-        if (camPos.lengthSq() === 0) camPos.copy(want); else camPos.lerp(want, Math.min(1, dt * 10)); camLook.copy(at); camLook.y += Math.max(0, -st.pitch) * d * 0.9; let cp = camPos; if (st.shakeT > 0) { st.shakeT -= dt; cp = camPos.clone(); cp.x += (Math.random() - 0.5) * 0.6 * s; cp.y += (Math.random() - 0.5) * 0.6 * s; } G.cut({ pos: cp, look: camLook, fov: 48 });
+        if (camPos.lengthSq() === 0) camPos.copy(want); else camPos.lerp(want, Math.min(1, dt * 10)); camLook.copy(at); camLook.y += Math.max(0, -st.pitch) * d * 0.9; let cp = camPos; if (st.shakeT > 0) { st.shakeT -= dt; cp = camPos.clone(); cp.x += (Math.random() - 0.5) * 0.6 * s; cp.y += (Math.random() - 0.5) * 0.6 * s; } G.follow({ pos: cp, look: camLook, fov: 48 });
       }
     };
     const cleanup = () => { if (jackOut.root.parent !== scene) { scene.add(jackOut.root); st.inHand = false; } root.removeEventListener('keydown', kd); root.removeEventListener('keyup', ku); el.removeEventListener('wheel', wheel); el.removeEventListener('pointerdown', pd); el.removeEventListener('pointermove', pm); el.removeEventListener('pointerup', pu); el.removeEventListener('pointercancel', pu); G.updaters = G.updaters.filter(u => u !== tick); hud.remove(); css.remove(); ui.destroy(); jackOut.after = wasAfter; jackOut.root.scale.setScalar(SC); jackOut.root.visible = true; camera.near = nearOld; camera.updateProjectionMatrix(); };
@@ -1095,6 +1095,7 @@ function run(G, W, opts) {
         let prevSweeping = false; const end = kind => { if (S.ended) return; S.ended = true; st.choreTick = null; resolve({ kind, clock: kind === 'time' }); };
         st.choreTick = dt => {
           S.t += dt; const sc = SC * st.s; carrier.scale.setScalar(1 / sc);
+          { const key = [S.chores.sweep, S.chores.dish, S.chores.water].join(); if (key !== S.listKey) { S.listKey = key; G.hud.objective([{ text: 'Sweep the floor', done: S.chores.sweep }, { text: 'Fill the hen’s dish', done: S.chores.dish }, { text: 'Fill the trough', done: S.chores.water }]); } }       // (the three things she asked: struck through as each is done)
           st.s += (S.sTarget - st.s) * Math.min(1, dt * 4);
           if (st.pos.z > -213) st.pos.z = -213;       // (the door is shut, and he stays in)
           { S.mv = Math.hypot(st.pos.x - S.px, st.pos.z - S.pz); const inst = S.mv / Math.max(dt, 1e-3) / (SC * Math.pow(st.s, 0.6)); S.speedN += (inst - S.speedN) * Math.min(1, dt * 8); S.px = st.pos.x; S.pz = st.pos.z; }

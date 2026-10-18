@@ -56,7 +56,8 @@ async function run(G, W, opts) {
       const nx = st.pos.x + Math.sin(st.heading) * sp * dt, nz = st.pos.z + Math.cos(st.heading) * sp * dt;
       if (!blocked(nx, st.pos.z)) st.pos.x = nx; if (!blocked(st.pos.x, nz)) st.pos.z = nz;
     }
-    ja.speed = sp; ja.phase += sp * dt * 0.42 / 0.95 * 1.6; ja.shuffle = 0; ja.bow = 0.25;
+    ja.speed = sp; ja.phase += B.stride(sp * dt) * 1.6;       // (the stride of a smaller, hurrying Jack: a shorter step, and more of them)
+    ja.shuffle = 0; ja.bow = 0.25;
     jackIn.root.position.set(st.pos.x, 0, st.pos.z); jackIn.root.rotation.y = st.heading;
     const near = st.goal ? Math.hypot(st.pos.x - st.goal.x, st.pos.z - st.goal.z) : 99;
     st.hb += dt; if (A && A.thud && st.hb > lerp(0.5, 1.3, clamp((near - 20) / 90, 0, 1))) { st.hb = 0; A.thud(0.12); }       // (a heartbeat, quickening as he nears her)

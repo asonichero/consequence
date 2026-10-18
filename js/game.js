@@ -90,6 +90,9 @@ function create(els) {
     };
   }
 
+  // A hint worth giving once, ever: a toast the first time a control is wanted (that it has been given is kept on the device). Returns true if it was shown.
+  G.tip = (key, text, ms) => { const m = store.get('castle-consequence:tips:v1', {}) || {}; if (m[key]) return false; m[key] = 1; store.set('castle-consequence:tips:v1', m); G.hud.toast(text, ms || 6000); return true; };
+
   // ── Cues: what the world itself points at. A soft gold ring on the ground where something matters now (the objective, or what the Context button would act on), breathing slowly, and, when it is far off, a faint
   // column of light over it, so that it can be found. G.cue.set(id, { x, z, y, r } | null): a scene names its cues as they change; they are drawn in explore and beat modes only, and a scene's end clears them. ──
   {
@@ -106,8 +109,19 @@ function create(els) {
       clear() { for (const id in cues) cues[id].o = null; },
       get(id) { const c = cues[id]; return c && c.o; },       // (what a cue is pointing at now: for tools and tests)
     };
+    // When the goal is out of the picture, a small gold chevron at the edge of the screen points the way to it.
+    const arrow = document.createElement('div'); arrow.id = 'cueArrow'; arrow.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 18 12 5l8 13-8-4z"/></svg>'; document.body.appendChild(arrow);
+    { const st = document.createElement('style'); st.textContent = '#cueArrow { position: fixed; left: 0; top: 0; width: 34px; height: 34px; margin: -17px 0 0 -17px; z-index: 11; pointer-events: none; display: none; filter: drop-shadow(0 0 4px rgba(0,0,0,.8)); } #cueArrow svg { width: 100%; height: 100%; fill: #f0d98a; stroke: #3a2c10; stroke-width: 1.4; stroke-linejoin: round; }'; document.head.appendChild(st); }
+    const tmpV = new THREE.Vector3(), pointOut = o => {
+      const W = root.innerWidth, H = root.innerHeight; tmpV.set(o.x, (o.y || 0) + (o.r || 10) * 0.6, o.z); const behind = tmpV.clone().applyMatrix4(camera.matrixWorldInverse).z > 0; tmpV.project(camera);
+      let x = tmpV.x, y = tmpV.y; if (behind) { x = -x; y = -y; if (Math.abs(x) < 0.05 && Math.abs(y) < 0.05) x = 1; }
+      if (!behind && Math.abs(x) < 0.9 && Math.abs(y) < 0.86) return null;       // (in the picture: the ring is its own pointer)
+      const m = Math.max(Math.abs(x) / ((W / 2 - 80) / (W / 2)), Math.abs(y) / ((H / 2 - 92) / (H / 2)), 1e-6); x /= m; y /= m;
+      return { px: W / 2 + x * W / 2, py: H / 2 - y * H / 2, ang: Math.atan2(-y * H / 2 + 0, x * W / 2) };
+    };
     const u = (dt, t) => {
       const on = mode === 'explore' || mode === 'beat';
+      { const gl = cues.goal, pt = on && gl && gl.o ? pointOut(gl.o) : null; arrow.style.display = pt ? 'block' : 'none'; if (pt) arrow.style.transform = 'translate(' + pt.px.toFixed(1) + 'px,' + pt.py.toFixed(1) + 'px) rotate(' + (pt.ang + Math.PI / 2).toFixed(3) + 'rad)'; }
       if (grp.parent !== G.scene) { if (grp.parent) grp.parent.remove(grp); if (G.scene) G.scene.add(grp); }
       grp.visible = on; if (!on) return;
       for (const id in cues) {
@@ -192,8 +206,17 @@ function create(els) {
 
   // ── The frame loop. ──
   let last = performance.now();
+  // A phone that cannot keep up draws fewer pixels rather than fewer frames: if a few seconds of frames are slow, the pixel ratio steps down (never back up, so that it does not hunt). Not under automation, which wants the same picture each time.
+  const slow = { n: 0, sum: 0, t0: 0 }, autoRes = !(root.navigator && root.navigator.webdriver) && !/[?&]fixedres\b/.test(root.location ? root.location.search : '');
+  const adaptRes = real => {
+    if (!autoRes || G.paused || G.seekTo != null) return;
+    if (!slow.t0) slow.t0 = performance.now(); if (performance.now() - slow.t0 < 4000) return;       // (the first seconds of a scene build things: they do not count)
+    slow.n++; slow.sum += real; if (slow.n < 90) return;
+    const avg = slow.sum / slow.n, pr = renderer.getPixelRatio(); slow.n = 0; slow.sum = 0;
+    if (avg > 0.034 && pr > 0.8) { renderer.setPixelRatio(Math.max(0.75, pr > 1.01 ? Math.max(1, pr - 0.25) : pr - 0.25)); resize(); slow.t0 = performance.now() - 2500; }
+  };
   function frame(now) {
-    const real = Math.min(G.maxDt, (now - last) / 1000); last = now;
+    const real = Math.min(G.maxDt, (now - last) / 1000); last = now; adaptRes(real);
     if (G.seekTo != null && G.mode !== 'cutscene') G.seekTo = null;
     const seeking = G.seekTo != null; if (seeking !== muted) setMuted(seeking);
     const steps = G.paused ? 0 : seeking ? 40 : 1, dt = seeking ? 0.05 : real;
@@ -230,6 +253,7 @@ function create(els) {
   // camOverride(n) may return a camera { pos, look, fov } to use for beat n in place of the scene's own.
   G.sayOverride = null; G.note = text => { if (G.onBeat) G.onBeat({ beat: G.beat, kind: 'note', name: 'action', args: [text], isNew: false }); };       // (G.note: something the player is asked to do, for the script in the scene notes)
   G.onBeat = null; G.beatGate = null; G.camOverride = null; G.specOf = specOf; G.cutNow = cutNow;
+  G.follow = cutNow;       // (a camera that goes with the player, frame by frame, is not a cut: it marks no beat, and the scene notes' angles do not take it over)
   let stall = null, deferred = null;
   // A beat is one camera angle: it begins when the scene cuts (or moves) to a new angle and runs until the next one, whatever is said and done in between. (Lines said before any angle
   // has been set open beat 1.) G.cut(shot, setup): `setup` runs as the cut happens, to put everyone where they stand as the beat begins.

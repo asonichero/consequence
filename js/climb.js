@@ -318,7 +318,7 @@ function run(G, W) {
       if (st.shake > 0) { want.x += (Math.random() - 0.5) * 2.2 * kk; want.y += (Math.random() - 0.5) * 1.6 * kk; st.shake = Math.max(0, st.shake - dt * 3); }
       if (camPos.lengthSq() === 0) camPos.copy(want); else camPos.lerp(want, Math.min(1, dt * (st.cine ? 2.2 : 8))); camLook.lerp(at, st.cine ? Math.min(1, dt * 4) : 1);
       fovCur = lerp(fovCur, st.cine ? st.cine.fov : g.phase === 'blow' ? 56 : 50, Math.min(1, dt * 4));
-      G.cut({ pos: camPos, look: camLook, fov: fovCur });
+      G.follow({ pos: camPos, look: camLook, fov: fovCur });
       // At the top: up through the cloud.
       if (!st.ended && st.cur.final && st.mode === 'idle') { st.ended = true; finish(); }
     };

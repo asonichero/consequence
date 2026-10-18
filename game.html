@@ -14,7 +14,7 @@
 <title>Climbing Toward Consequence</title>
 <style>
   :root { --sl: env(safe-area-inset-left, 0px); --sr: env(safe-area-inset-right, 0px); --st: env(safe-area-inset-top, 0px); --sb: env(safe-area-inset-bottom, 0px); }       /* (the notch and the home bar: nothing the player must touch or read sits under them) */
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0e13; color: #ece8df; font-family: Georgia, 'Times New Roman', serif; touch-action: none; -webkit-user-select: none; user-select: none; }
+  html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; background: #0b0e13; color: #ece8df; font-family: Georgia, 'Times New Roman', serif; touch-action: none; -webkit-user-select: none; user-select: none; }
   #stage { position: fixed; inset: 0; } #stage canvas { display: block; }
   #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 40; }
   #rotate { position: fixed; inset: 0; z-index: 120; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 18px; background: #0b0e13; color: #ece8df; text-align: center; font-size: 18px; letter-spacing: .02em; padding: 0 12vw; }
@@ -36,8 +36,8 @@
   #chCard #chNum { font-size: clamp(12px, 2.2vw, 18px); letter-spacing: .5em; text-transform: uppercase; color: #c9b87a; padding-left: .5em; }
   #chCard #chTitle { font-size: clamp(28px, 6.4vw, 62px); letter-spacing: .06em; font-weight: normal; max-width: 90vw; }
   #chCard #chRule { width: 64px; height: 1px; background: #8a7a4a; }
-  #dev { position: fixed; left: 12px; bottom: 10px; font-size: 12px; opacity: .65; z-index: 31; } #dev a { color: #c9b87a; margin-right: 12px; } #dev select { background: #1a1d26; color: #c9b87a; border: 1px solid #4a4d58; border-radius: 4px; font-size: 12px; padding: 2px 4px; }
-  #ver { position: fixed; right: 12px; bottom: 10px; font-size: 14px; font-weight: bold; letter-spacing: .04em; color: #f3e4b0; background: rgba(8,10,14,0.78); border: 1px solid #5a5f72; border-radius: 6px; padding: 4px 10px; opacity: 1; z-index: 31; }
+  #dev { position: fixed; left: calc(var(--sl) + 12px); bottom: calc(var(--sb) + 10px); font-size: 12px; opacity: .65; z-index: 31; } #dev a { color: #c9b87a; margin-right: 12px; } #dev select { background: #1a1d26; color: #c9b87a; border: 1px solid #4a4d58; border-radius: 4px; font-size: 12px; padding: 2px 4px; }
+  #ver { position: fixed; right: calc(var(--sr) + 12px); bottom: calc(var(--sb) + 10px); font-size: 14px; font-weight: bold; letter-spacing: .04em; color: #f3e4b0; background: rgba(8,10,14,0.78); border: 1px solid #5a5f72; border-radius: 6px; padding: 4px 10px; opacity: 1; z-index: 31; }
   #settings, #endcard { background: rgba(8,10,14,0.78); align-items: center; justify-content: center; }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 9px 0; font-size: 15px; }
   .row.stack { flex-direction: column; align-items: stretch; gap: 2px; margin: 12px 0; } .row.stack input[type=range] { width: 100%; margin: 0; }
@@ -73,10 +73,13 @@
     #menu { gap: 8px; } #menu button { padding: 9px 18px; font-size: 16px; min-width: 200px; }
     .card { padding: 14px 20px; font-size: 14px; line-height: 1.45; } .card h2 { font-size: 18px; margin-bottom: 6px; } .row { margin: 5px 0; } .row.stack { margin: 7px 0; }
     #notice .card, #settings .card, #pmenu .card, #confirmBox .card { max-height: calc(100vh - 20px); overflow-y: auto; }
+    body[data-mode="explore"] #subs { left: calc(var(--sl) + 140px); right: calc(var(--sr) + 172px); } body[data-mode="beat"] #subs { right: calc(var(--sr) + 172px); }       /* (the thumbs are smaller too, so the lane between them is wider) */
   }
   #confirmBox { background: rgba(8,10,14,0.82); align-items: center; justify-content: center; z-index: 70; } #confirmBox .card button { display: block; width: 100%; margin: 10px 0 0; }
   .row input[type=checkbox] { width: 26px; height: 26px; flex: none; } label.row { cursor: pointer; min-height: 40px; }
   @media (pointer: coarse) { #dev #dlibBtn { padding: 10px 14px; font-size: 14px; } #dev select { padding: 8px; font-size: 14px; } }
+  #bugChip { position: fixed; left: 50%; top: calc(var(--st) + 8px); transform: translateX(-50%); z-index: 60; display: none; background: rgba(90,20,24,0.92); border: 1px solid #e07070; color: #ffe0e0; border-radius: 8px; padding: 7px 14px; font-size: 14px; max-width: 70vw; } #bugChip.on { display: block; }
+  #bugBox { background: rgba(8,10,14,0.82); align-items: center; justify-content: center; z-index: 71; } #bugBox .card button { display: block; width: 100%; margin: 10px 0 0; } #bugBox pre { margin: 8px 0 0; padding: 8px 10px; background: #0d1018; border: 1px solid #3a3f52; border-radius: 6px; font: 12px/1.4 monospace; white-space: pre-wrap; word-break: break-word; max-height: 36vh; overflow: auto; user-select: text; -webkit-user-select: text; }
   #pmenu { background: rgba(8,10,14,0.78); align-items: center; justify-content: center; z-index: 50; } #pmenu #bReset { display: none; } #pmenu .card button { display: block; width: 100%; margin: 10px 0 0; }
   #titleShot { position: fixed; inset: 0; z-index: 29; display: none; background-size: cover; background-position: center; } body.titlePic #titleShot { display: block; }
   body.inplay #ver { display: none; }
@@ -111,7 +114,7 @@
 </div>
 <div id="chCard"><div id="chNum"></div><div id="chRule"></div><div id="chTitle"></div></div>
 <div id="dev" class="screen-dev"><select id="levelSel" style="display:none" title="Level select (does not touch your save)"><option value="">Level select&hellip;</option><option value="opening">Prologue: the opening</option><option value="market">Chapter One: Market Day &mdash; the cow</option><option value="road">Chapter One: the market road</option><option value="cart">Chapter One: the Peddler's cart</option><option value="nightH">Chapter One: night, humble</option><option value="nightC">Chapter One: night, cheeky</option><option value="nightB">Chapter One: night, brash (the birch)</option><option value="corrH">Chapter One: the correction, humble</option><option value="corrC">Chapter One: the correction, cheeky</option><option value="corrB">Chapter One: the correction, brash (the birch)</option><option value="gardenH">Chapter One: planting, humble</option><option value="gardenC">Chapter One: planting, cheeky</option><option value="gardenB">Chapter One: planting, brash</option><option value="ch3">Chapter Two: The Climb &mdash; waking, through to the end</option><option value="ch3d">Chapter Two: dress and the knife</option><option value="climb">Chapter Two: the climb itself</option><option value="meadow">Chapter Two: the cloud meadow</option><option value="castlehall">Chapter Two: inside the castle (the hall)</option><option value="castlecatch">Chapter Two: Gerda catches Jack (the capture)</option><option value="castle">Test: explore the castle</option><option value="ch3open">Chapter Three: the kitchen (the box on the table)</option><option value="ch3nursery">Chapter Three: the nursery</option><option value="ch3disc">Chapter Three: the nursery correction</option><option value="ch3dress">Chapter Three: dressed at the table</option><option value="ch3chores">Ch3: the hen chores</option><option value="ch3bath">Ch3: bath time</option><option value="ch3bed">Ch3: bedtime</option><option value="ch4dream">Ch4: the dream</option><option value="ch4wake">Ch4: waking, and breakfast</option><option value="ch4breakfast">Ch4: breakfast</option><option value="cards">Test: the chapter title cards</option></select></div>
-<div id="ver">v0.4.1 &middot; build 289 &middot; 2026-10-18</div>
+<div id="ver">v0.4.1 &middot; build 290 &middot; 2026-10-18</div>
 
 <div id="settings" class="screen">
   <div class="card narrow">
@@ -126,6 +129,11 @@
     <p style="font-size:13px;opacity:.8">Safe word: <b>Red</b>. In any correction scene the Red button ends it at once, with nothing held against you.</p>
     <button id="bReset">Delete saved game</button><button class="primary" id="bBack">Back</button>
   </div>
+</div>
+
+<div id="bugChip">Something went wrong &mdash; tap for details</div>
+<div id="bugBox" class="screen">
+  <div class="card narrow"><h2>Something went wrong</h2><p>The game carried on, but a scene tripped. If it has stopped, return to the title and Continue. This is what happened, for the report:</p><pre id="bugText"></pre><button id="bugClose" class="primary">Carry on</button><button id="bugTitle">Return to the title</button></div>
 </div>
 
 <div id="confirmBox" class="screen">

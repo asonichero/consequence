@@ -110,7 +110,7 @@ async function run(G, W, M) {
   G.cut(shots.side); ma.chin = 0; await G.wait(0.4);
   for (let i = 0; i < 10; i++) { mother.root.rotation.y = lerp(0, Math.PI, (i + 1) / 10); await G.wait(0.04); }
   ma.speed = 12;
-  for (let i = 0; i < 26; i++) { mother.root.position.z -= 0.55; ma.phase += 0.7; await G.wait(0.05); } ma.speed = 0; mother.root.visible = false;
+  for (let i = 0; i < 26; i++) { mother.root.position.z -= 0.55; ma.phase += B.stride(0.55); await G.wait(0.05); } ma.speed = 0; mother.root.visible = false;
   for (let i = 0; i < 16; i++) { ext.doorLeaf.rotation.y = lerp(-1.9, 0, (i + 1) / 16); await G.wait(0.04); }
   A_ && A_.thwack(0.3, true, 0.5);
   paintJack(0); mother.root.position.set(DOOR.x + 2, 0, DOOR.z);
@@ -229,7 +229,7 @@ function playLoop(G, W, M) {
       }
       for (let k = prints.length - 1; k >= 0; k--) { const pr = prints[k]; pr.age += dt; pr.mt.opacity = 0.8 * clamp(1 - (pr.age - 4) / 8, 0, 1); if (pr.age > 12) { scene.remove(pr.m); prints.splice(k, 1); } }                           // (Jack cannot walk through her)
       if (st.pos.z > 98 && Math.abs(st.pos.x) < 34 && performance.now() > st.scoldAt) scold();                                          // heading for the gate without the cow: he talks himself out of it
-      st.speedN = vel.length() / SC; ja.speed = st.speedN * 0.8; ja.phase += dt * st.speedN * 0.42;
+      st.speedN = vel.length() / SC; ja.speed = st.speedN * 0.8; ja.phase += B.stride(st.speedN * SC * dt);
       jack.root.position.set(st.pos.x, st.y, st.pos.z); jack.root.rotation.y = turn(jack.root.rotation.y, st.heading, Math.min(1, dt * 12));
       // Milky-White: grazes about her yard; frightened by quick movement near her (as the hen was), calmed by slow, close company.
       cow.t += dt; cow.cool -= dt; const d = Math.hypot(st.pos.x - cow.pos.x, st.pos.z - cow.pos.z), before = cow.pos.clone(), gap = cowGap(st.pos.x, st.pos.z, cow);
@@ -251,13 +251,13 @@ function playLoop(G, W, M) {
       cowM.position.set(cow.pos.x, 0, cow.pos.z); cowM.rotation.y = cow.heading; cowM.userData.headBase = cow.mode === 'flee' ? -0.25 : cow.mode === 'graze' && mv.lengthSq() < 1e-6 && d > 30 ? 0.55 : 0.1;
       if (cord.visible) { /* (only after the lead is on) */ }
       // The camera: always centred on Jack.
-      const goal = camGoal(); camPos.lerp(goal, Math.min(1, dt * 8)); look.set(st.pos.x, st.y + 15 * SC, st.pos.z); G.cut(spec);
+      const goal = camGoal(); camPos.lerp(goal, Math.min(1, dt * 8)); look.set(st.pos.x, st.y + 15 * SC, st.pos.z); G.follow(spec);
       // HUD.
       const near_ = d < 90 || st.hasLead, pace = st.speedN < 0.5 ? 'Still' : st.speedN > ALARM + 14 ? 'Running' : st.sneak ? 'Sneaking' : 'Walking';
       const pushed = st.speedN > ALARM && d < 44 && cow.mode !== 'calm';
       G.hud.objective(!st.hasLead ? 'Fetch the cow’s lead from the cowshed.' : cow.trust >= 99.5 ? 'Put the lead on Milky-White.' : 'Win Milky-White’s trust, gently: sneak up and wait beside her.');
       G.hud.meter('trust', near_ ? { label: 'Milky-White trusts you', value: cow.trust / 100, text: Math.round(cow.trust) + '%', tone: cow.trust >= 99.5 ? 'full' : '' } : null);
-      G.hud.meter('pace', { label: pace + (pushed ? ' — too fast near her!' : ''), tone: pushed ? 'warn' : '' });
+      G.hud.meter('pace', near_ ? { label: pace + (pushed ? ' — too fast near her!' : ''), tone: pushed ? 'warn' : '' } : null);       // (how fast he is going matters near her, and only there)
       { const goal = st.attached ? null : !st.hasLead ? (hanging.visible ? LEADSPOT : st.leadDropped ? dropped.position : null) : cow.pos; G.cue.set('goal', goal ? { x: goal.x, z: goal.z, r: st.hasLead ? 15 : 9 } : null); }       // (what he is after: the lead on its hook, then the cow)
       // The touch buttons say what a tap will do now, and grey out when it would do nothing (the same conditions as the keys above).
       { const bar = !st.climb && st.grounded && findBar(), ground = st.grounded && !st.climb && !st.attached;
@@ -268,7 +268,7 @@ function playLoop(G, W, M) {
     };
     st.scolds = 0; st.scoldAt = 0;
     M.play = { st, cow, interact, toggleSneak, cycleZoom, drop };                                                                       // (for the tests)
-    G.updaters.push(tick); G.mode = 'explore';
+    G.updaters.push(tick); G.mode = 'explore'; G.tip('move', 'Move with the stick on the left; drag anywhere else on the screen to look around.', 8000);
   });
 }
 

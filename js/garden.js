@@ -226,7 +226,7 @@ function run(G, W, tier) {
           const sp = (st.hold === 'rock' ? HEAVY : keys.run ? RUN : WALK) * SC, nx = st.pos.x + Math.sin(st.heading) * sp * dt, nz = st.pos.z + Math.cos(st.heading) * sp * dt;
           if (!blockedAt(nx, st.pos.z)) st.pos.x = nx; if (!blockedAt(st.pos.x, nz)) st.pos.z = nz; st.speedN = sp / SC;
         } else st.speedN = 0;
-        aOut.speed = st.speedN; aOut.phase += st.speedN * SC * dt * 0.42 / 0.95;
+        aOut.speed = st.speedN; aOut.phase += B.stride(st.speedN * SC * dt);
       }
       if (hop.y > 0 || hop.vy > 0) { hop.vy -= 420 * SC * dt; hop.y += hop.vy * dt; if (hop.y <= 0) { hop.y = 0; hop.vy = 0; } } aOut.air = hop.y > 0.01;
       ui.set('jump', { label: 'Jump', icon: 'jump', enabled: canHop() });
@@ -259,7 +259,7 @@ function run(G, W, tier) {
         const d = ZOOMS[st.zoom].d, p = st.pitch, at = v(st.pos.x, 15 * SC, st.pos.z);
         const want = v(at.x + Math.sin(st.yaw) * Math.cos(p) * d, Math.max(3, at.y + Math.sin(p) * d), at.z + Math.cos(st.yaw) * Math.cos(p) * d);
         if (camPos.lengthSq() === 0) camPos.copy(want); else camPos.lerp(want, Math.min(1, dt * 10)); camLook.copy(at);
-        G.cut({ pos: camPos, look: camLook, fov: 48 });
+        G.follow({ pos: camPos, look: camLook, fov: 48 });
       }
     };
     G.updaters.push(tick); G.garden = { st, rocks, weeds, pips, interact, pickUp, putDown, hoe, cellAt };      // (for tools and tests)
