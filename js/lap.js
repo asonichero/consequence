@@ -547,8 +547,13 @@ function create(view, opts) {
     if (impl.paddle) applyEdits('gerda', ['paddle'], gwArm);
   };
   const STANDING = { standSeat: 1, standTable: 1 };
+  // Where the glutes block rests, when his thighs are straight (standing, or kneeling upright): its top face level with the tops of his legs and its front face level with their fronts (the block is 5.2 deep, so its hinge, at its back face, is 5.16 behind the front of the legs, and the block hangs from there to 0.15 over their tops).
+  // Folded over a knee or a table it hangs from the hinge in the plane of his back and tips forward, bridging his back and thighs (the poses in the file replace either).
+  const NATURAL = { standSeat: 1, standTable: 1, stool: 1 }, HINGE_NAT = [0.15, -3.01], HINGE_FOLD = [0.6, -2.55];
   jack.after = function (j) {
-    glutesTilt.visible = !STANDING[stanceNow()] && !(stanceNow() === 'stool' && st.trousers !== 'down');      // (the glutes block bridges his back and his thighs once they fold: upright, it would only cut into his legs)
+    { const n = stanceNow(), up = NATURAL[n] ? st.trousers === 'down' : true; glutesTilt.visible = up;       // (upright, the block is there only while his trousers are down: otherwise they are on it)
+      const nat = (NATURAL[st.from] ? 1 : 0) + ((NATURAL[st.to] ? 1 : 0) - (NATURAL[st.from] ? 1 : 0)) * easeIO(clamp(st.blend, 0, 1));
+      if (!glutesTilt.userData.proc) { glutesTilt.position.set(0, HINGE_FOLD[0] + (HINGE_NAT[0] - HINGE_FOLD[0]) * nat, HINGE_FOLD[1] + (HINGE_NAT[1] - HINGE_FOLD[1]) * nat); glutesTilt.rotation.x = -0.45 * (1 - nat); } }      // (the glutes block bridges his back and his thighs once they fold: upright, it would only cut into his legs)
     const sf = 1 - 0.72 * (st.settle || 0);      // (settled: he lies still over her lap, and only the contact itself moves him)
     const k = J.kick * sf, d = clamp(pain.distress(), 0, 1.5) * sf, w = (Math.sin(J.t * 9) * 0.05 * Math.min(1, d) + Math.sin(J.t * 5.3) * 0.03 * Math.min(1, d)) * sf, sz = st.size * jackFull;
     const e = easeIO(clamp(st.blend, 0, 1)), p = mixPose(limbs(st.from, k, d, w, sz), limbs(st.to, k, d, w, sz), e);
