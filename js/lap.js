@@ -129,7 +129,7 @@ function create(view, opts) {
   };
   const bandIndex = () => { const d = pain.distress(); return d < 0.3 ? 0 : d < 0.6 ? 1 : d < 0.9 ? 2 : d < 1 ? 3 : d < 1.5 ? 4 : 5; };
   const exprFor = () => Math.min(3, Math.max(0, bandIndex() - (bandIndex() >= 3 ? 1 : 0)));
-  const canStrike = () => !st.ended && st.blend >= 1 && (st.to === 'lap' ? st.implement !== 'birch' : overTable(st.to));   // (the birch is for the table; it is not used across the knee)
+  const canStrike = () => !st.ended && st.blend >= 1 && (st.to === 'lap' ? st.implement !== 'birch' : st.to === 'table');   // (the birch is for the table; it is not used across the knee)
 
   // Audio (js/audio.js): the smack is a short noise burst, deeper through clothing, and Jack's voice is a synthesised vowel, higher, longer and more broken the more distressed he is.
   const thwack = power => { if (st.sound && root.GameAudio) { if (st.implement === 'birch') root.GameAudio.birch(power, st.trousers === 'up'); else root.GameAudio.thwack(power, st.trousers === 'up'); } };
@@ -193,7 +193,7 @@ function create(view, opts) {
   const LP = root.LapPoses || {};
   const mkSet = src => JSON.parse(JSON.stringify(src || {}));
   // One set of pose edits for each position (over the knee, bent over the table; the table's are optional in the file as LapPoses.table), at each of the two sizes.
-  const SETS = { lap: { 100: mkSet(LP[100] || (LP.gerda ? LP : {})), 50: mkSet(LP[50] || (LP.gerda ? LP : {})) }, table: { 100: mkSet(LP.table && LP.table[100]), 50: mkSet(LP.table && LP.table[50]) }, stool: { 100: mkSet(LP.stool && LP.stool[100]), 50: mkSet(LP.stool && LP.stool[50]) } };
+  const SETS = { lap: { 100: mkSet(LP[100] || (LP.gerda ? LP : {})), 50: mkSet(LP[50] || (LP.gerda ? LP : {})) }, table: { 100: mkSet(LP.table && LP.table[100]), 50: mkSet(LP.table && LP.table[50]) } };
   const BELT_AT = new V3(-5.4, 2, -0.5), PIN_AT = new V3(0, 7.2, -3.3), GRIP_AT = new V3(-1.2, 7.2, -3.7);       // (where his hand goes for his belt, where it lies in the small of his back, and where she holds his wrist then: his hips' and torso's own axes)
   const SIZE_MIN = 0.5;                       // below this the poses do not reach (the lower limit of the position)
   // Editable poses: Hand, Paddle and Birch { rest, raised, contactL, contactR } for Gerda (the contact pose is per cheek, and per implement), and Jack { base, react }.
@@ -204,8 +204,7 @@ function create(view, opts) {
     for (const w of WIELD) { e.jack[w] = e.jack[w] || {}; for (const b of GERDA_BEATS) e.jack[w][b] = e.jack[w][b] || {}; }     // (Jack's beats are the giver's: the same moments of the same blow)
   }
   const LOCK = JSON.parse(JSON.stringify(SETS));            // the poses as loaded: locked. The editor's sliders are offsets from these (0 when it opens); Report writes out the sum.
-  const overTable = n => n === 'table' || n === 'stool';           // (the two places at the table: bent over its edge, or kneeling up at it on the stool)
-  const posKey = () => { const n = stanceNow(); return n === 'table' || n === 'stool' ? n : 'lap'; };           // the poses in force are those of where the scene is
+  const posKey = () => stanceNow() === 'table' ? 'table' : 'lap';           // the poses in force are those of where the scene is
   const EDITS = new Proxy({}, { get: (_, k) => SETS[posKey()][k] });
   let editKey = 100;                          // the set the editor is working on (Jack is held at that size while it is open)
   const sizeT = () => clamp((st.size - SIZE_MIN) / (1 - SIZE_MIN), 0, 1);    // 0 at 50%, 1 at 100%
@@ -317,9 +316,9 @@ function create(view, opts) {
   // A place is where the giver is (seated, or standing at the table) and where Jack is. His stances: 'standSeat' (upright between her knees, facing her), 'lap' (face
   // down across her right knee), 'table' (bent forward over the table's edge, chest on the top, feet on the floor), 'standTable' (upright beside the table, facing her).
   // moving between two blends his body (and the hands she lays on him) over a few seconds.
-  const FLOOR = -LEGH, TABLE_H = 14.2, TABLE_TOP = FLOOR + TABLE_H, LEAN_STAND = 0.32, KIT = 1.4, STOOL_H = 22 / KIT, KT_TOP = 25.9 / KIT, STOOL_LEAN = 1.3;       // (the castle's kitchen is drawn 1.4 times this scale: its tall stool's seat is 22 up, the cloth on its table 25.9; kneeling on the stool he leans 1.3 radians forward, his hands on the table)
-  const PLACES = { seat: { giver: 'sit', jack: 'standSeat' }, lap: { giver: 'sit', jack: 'lap' }, table: { giver: 'stand', jack: 'table' }, stool: { giver: 'standStool', jack: 'stool' }, after: { giver: 'stand', jack: 'standTable' } };
-  const GIVER_AT = { sit: new V3(0, 0, 0), stand: new V3(-3, FLOOR, -10), standStool: new V3(0.5, FLOOR, -14) };       // (at the kitchen table she stands at his left, a little ahead of his hips)
+  const FLOOR = -LEGH, TABLE_H = 14.2, TABLE_TOP = FLOOR + TABLE_H, LEAN_STAND = 0.32;
+  const PLACES = { seat: { giver: 'sit', jack: 'standSeat' }, lap: { giver: 'sit', jack: 'lap' }, table: { giver: 'stand', jack: 'table' }, after: { giver: 'stand', jack: 'standTable' } };
+  const GIVER_AT = { sit: new V3(0, 0, 0), stand: new V3(-3, FLOOR, -10) };
   const AXX = new V3(1, 0, 0), AXY = new V3(0, 1, 0), AXZ = new V3(0, 0, 1), axq = (ax, a) => new THREE.Quaternion().setFromAxisAngle(ax, a);
   const lapQ = pitch => axq(AXZ, pitch).multiply(axq(AXY, Math.PI / 2)).multiply(axq(AXX, Math.PI / 2)), uprightQ = axq(AXY, Math.PI);
   const tablePitch = sz => clamp(Math.asin(clamp((TABLE_TOP + 2 * sz - (FLOOR + 12 * sz)) / (11 * sz), -1, 1)), 0, 0.8);
@@ -329,13 +328,12 @@ function create(view, opts) {
       case 'standSeat': return { p: new V3(0, FLOOR + 12 * sz, 18.5), q: uprightQ };       // (a little back from her knees, so that her head and his do not meet as she works at his belt)
       case 'standTable': return { p: new V3(-6 * sz, FLOOR + 12 * sz, 0), q: uprightQ };
       case 'table': return { p: new V3(-6 * sz, FLOOR + 12 * sz, 0), q: lapQ(tablePitch(sz)) };
-      case 'stool': return { p: new V3(-3.6, FLOOR + STOOL_H + 8 * sz, 0), q: axq(AXY, Math.PI / 2) };       // (kneeling on the stool, facing the table: his knees on the seat, his shins back along it)
       default: return { p: new V3(-6 * sz, 8.75 + 2 * sz, P.z), q: lapQ(PITCH) };
     }
   }
   const stanceNow = () => st.blend < 0.5 ? st.from : st.to;
-  const strikeStance = () => { const n = stanceNow(); return n === 'lap' || overTable(n); };
-  const strikeReady = () => st.blend >= 1 && (st.to === 'lap' || overTable(st.to));
+  const strikeStance = () => { const n = stanceNow(); return n === 'lap' || n === 'table'; };
+  const strikeReady = () => st.blend >= 1 && (st.to === 'lap' || st.to === 'table');
   // Jack's limbs for a stance: thighs and shins, head, arms, a little of the torso; the reaction to the last smack (k), his distress (d) and his wriggle (w) work on them.
   function limbs(name, k, d, w, sz) {
     const dd = Math.min(1, d), t = J.t, mL = J.kickSide === 'L' ? 1 : 0.45, mR = J.kickSide === 'R' ? 1 : 0.45, cover = st.cover || 0;
@@ -352,14 +350,6 @@ function create(view, opts) {
       return { tL: leg, tR: leg, zL: 0.1, zR: -0.1, kL: 0.1 * dd, kR: 0.1 * dd,
         nx: -0.1 - 0.25 * k + 0.04 * dd * Math.sin(t * 4), ny: -0.95 + 0.08 * Math.sin(t * 3) * dd, aLx: phi - Math.PI, aRx: phi - Math.PI,
         aLz: 0.26, aRz: -0.26, tz: 0.02 * dd * Math.sin(t * 6), tx: -0.05 * k, eL: -0.3, eR: -0.3 };
-    }
-    if (name === 'stool') {
-      // Kneeling up on the stool: thighs straight down onto the seat, shins back along it, the trunk leaned forward over the table and his hands flat on it (the arms are found from where the table is, at his size); only his head, his trunk and his knees react.
-      const lean = STOOL_LEAN - 0.06 * k, shX = -3.6 + 10 * sz * Math.sin(lean), shY = STOOL_H + 8 * sz + 10 * sz * Math.cos(lean);       // (his shoulder, from the table's edge, and from the floor)
-      const dx = Math.max(2, 4.5 - shX), dy = KT_TOP + 0.3 - shY, arm = clamp(-Math.atan2(dx, -dy) - lean, -3.0, -0.2);
-      return { tL: 0.02, tR: 0.02, zL: 0.1, zR: -0.1, kL: 1.55 + 0.1 * dd, kR: 1.55 + 0.1 * dd,
-        nx: -0.75 - 0.25 * k + 0.04 * dd * Math.sin(t * 4), ny: -0.4 + 0.08 * Math.sin(t * 3) * dd, aLx: arm, aRx: arm,
-        aLz: 0.16, aRz: -0.16, tz: 0.02 * dd * Math.sin(t * 6), tx: lean, eL: -0.25, eR: -0.25 };
     }
     // Standing: weight shifting, head bowed, hands at his sides (or, as he comes to it, swung back to cover himself).
     const sh = Math.sin(t * 2.1) * dd;
@@ -379,15 +369,6 @@ function create(view, opts) {
     tb(22, 2.4, 30, 11, TABLE_TOP - 1.2, 0, wood); for (const [x, z] of [[2.4, -12.6], [19.6, -12.6], [2.4, 12.6], [19.6, 12.6]]) tb(2.6, TABLE_H - 2.4, 2.6, x, FLOOR + (TABLE_H - 2.4) / 2, z, legs); table.visible = false;
   }
 
-  // The kitchen's own tall stool and table, to scale (the castle's, drawn at 1/1.4): a stool whose seat is 7 square, a table whose cloth is 20 deep from the edge he kneels at and 57 across, on four legs.
-  let stool = null, ktable = null;
-  if (opts.table !== false) {
-    const sw = new THREE.MeshLambertMaterial({ color: srgb(0x7a5a3a) }), sl = new THREE.MeshLambertMaterial({ color: srgb(0x4a3422) }), tt = new THREE.MeshLambertMaterial({ color: srgb(0x5a3c26) }), cl = new THREE.MeshLambertMaterial({ color: srgb(0x7a1f3a) });
-    const bx = (g, w, h, d, x, y, z, m) => { const q = new THREE.Mesh(new THREE.BoxGeometry(w / KIT, h / KIT, d / KIT), m); q.position.set(x / KIT, FLOOR + y / KIT, z / KIT); g.add(q); };
-    stool = new THREE.Group(); stage.add(stool); bx(stool, 10, 2, 10, 0, 21, 0, sw); for (const sx of [-1, 1]) for (const sz2 of [-1, 1]) bx(stool, 1.6, 21, 1.6, sx * 4, 10.5, sz2 * 4, sl); stool.visible = false;
-    ktable = new THREE.Group(); stage.add(ktable); bx(ktable, 28, 3, 76, 0, 24, 0, tt); bx(ktable, 28.4, 1, 80, 0, 25.4, 0, cl); for (const sx of [-1, 1]) for (const sz2 of [-1, 1]) bx(ktable, 4, 24, 4, sx * 9, 12, sz2 * 32, sl); ktable.visible = false;
-  }
-
   function birchFlex(sw, tau) {                      // the twigs trail on the way up, bow forward on the skin, and settle
     const ph = sw && sw.phase, flex = !sw ? 0.04 : (ph === 'lift' || ph === 'hold' || ph === 'rise') ? -0.25 * (1 - sw.tau) : ph === 'strike' ? -0.25 * (1 - tau) + 0.2 * tau : ph === 'contact' ? 0.2 * Math.max(0.3, 1 - sw.t / TIMES.contact) : ph === 'freeze' ? -0.25 * (1 - tau) + 0.2 * tau : ph === 'back' ? 0.1 * (1 - (sw.hover || 0)) : 0.1;
     twigs.rotation.x = flex; for (const j of tips) j.rotation.x = flex * 1.3;
@@ -396,7 +377,7 @@ function create(view, opts) {
   // the offsets ARE the pose.
   // It also plays, outside the editor, wherever the table has poses made for the implement in hand (unless a scene turns that off with st.usePoses = false).
   const tableHasPoses = () => { const set = SETS[posKey()][100].gerda[st.implement] || {}, set2 = SETS[posKey()][50].gerda[st.implement] || {}; return GERDA_BEATS.some(b => Object.keys(set[b] || {}).length || Object.keys(set2[b] || {}).length); };
-  const isFree = () => overTable(posKey()) && (hs.on || (st.usePoses !== false && tableHasPoses()));
+  const isFree = () => posKey() === 'table' && (hs.on || (st.usePoses !== false && tableHasPoses()));
   function freePose(g) {
     const impl = IMPL[st.implement], gw = gerdaWeights(), sw = st.swing;
     g.torso.rotation.order = 'YXZ'; g.torso.rotation.set(0, 0, 0); g.neck.rotation.set(0.1, 0, 0); g.elbow.rotation.set(0, 0, 0); g.elbowL.rotation.set(0, 0, 0); g.wrist.rotation.set(0, 0, 0);
@@ -548,13 +529,12 @@ function create(view, opts) {
     if (impl.paddle) applyEdits('gerda', ['paddle'], gwArm);
   };
   const STANDING = { standSeat: 1, standTable: 1 };
-  // Where the glutes block rests, when his thighs are straight (standing, or kneeling upright): where buttocks sit. Its top face just over the tops of his legs, hiding them, and its front face level with their fronts (the block is 5.2 deep, so its hinge, at its back face, is 5.16 behind the front of the legs).
+  // Where the glutes block rests, when his thighs are straight (standing): where buttocks sit. Its top face just over the tops of his legs, hiding them, and its front face level with their fronts (the block is 5.2 deep, so its hinge, at its back face, is 5.16 behind the front of the legs).
   // The contact sites are on the block (its back face), so they go where it goes. Folded over a knee or a table it hangs from the hinge in the plane of his back and tips forward, bridging his back and thighs (the poses in the file replace either).
   let editingNow = () => false;       // (set once the editor's handles exist)
-  const NATURAL = { standSeat: 1, standTable: 1, stool: 1 }, HINGE_NAT = [0.15, -2.06], HINGE_FOLD = [0.6, -2.55], Q_FOLD = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.45, 0, 0)), Q_NAT = new THREE.Quaternion();
+  const NATURAL = { standSeat: 1, standTable: 1 }, HINGE_NAT = [0.15, -2.06], HINGE_FOLD = [0.6, -2.55], Q_FOLD = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.45, 0, 0)), Q_NAT = new THREE.Quaternion();
   jack.after = function (j) {
-    jack.pelvis.visible = stanceNow() !== 'stool';       // (the pelvis, the torso's bottom rows with its belt again, is left standing on his hips when the torso leans: bent over the stool its top face showed, a band of belt over his legs; the block is his seat there)
-    { const n = stanceNow(), up = n === 'stool' || !NATURAL[n] || st.trousers === 'down' || editingNow(); glutesTilt.visible = up;       // (kneeling on the stool it is always there, at any level of dress; standing, only while his trousers are down)
+    { const n = stanceNow(), up = !NATURAL[n] || st.trousers === 'down' || editingNow(); glutesTilt.visible = up;       // (upright, the block is there only while his trousers are down: otherwise they are on it)
       const nat = (NATURAL[st.from] ? 1 : 0) + ((NATURAL[st.to] ? 1 : 0) - (NATURAL[st.from] ? 1 : 0)) * easeIO(clamp(st.blend, 0, 1));
       if (!glutesTilt.userData.proc) { glutesTilt.position.set(0, HINGE_FOLD[0] + (HINGE_NAT[0] - HINGE_FOLD[0]) * nat, HINGE_FOLD[1] + (HINGE_NAT[1] - HINGE_FOLD[1]) * nat); glutesTilt.quaternion.copy(Q_FOLD).slerp(Q_NAT, nat); const sc = 1.2 + (0.98 - 1.2) * nat; glutes.mesh.scale.y = glutes.mesh.scale.z = sc; glutes.mesh.position.y = -2.15 * sc; glutes.mesh.position.z = 2.15 * sc; } }       // (upright it is the seat alone, not a bridge: still square in section, as over the knee and the table, but the size of his legs, 4.2 each way)      // (the glutes block bridges his back and his thighs once they fold: upright, it would only cut into his legs)
     const sf = 1 - 0.72 * (st.settle || 0);      // (settled: he lies still over her lap, and only the contact itself moves him)
@@ -614,10 +594,7 @@ function create(view, opts) {
     gerda.root.position.copy(GIVER_AT[st.giverStance]); applyEdits('gerda', ['frame'], gerdaWeights());       // (the giver's frame: her whole body moved and turned, over wherever she stands, before her pose is built on it)
     chair.visible = st.giverStance === 'sit' && opts.noChair !== true;
     if (st.shinsSeated !== (st.giverStance === 'sit')) { st.shinsSeated = st.giverStance === 'sit'; setShins(st.shinsSeated); }
-    { const onStool = st.to === 'stool' || st.from === 'stool', onTable = st.to === 'table' || st.from === 'table', want = st.showTable !== false;
-      if (table) { table.visible = want && onTable || (st.showTable === true && !onStool); table.position.x = tableEdgeX(sz); }
-      if (stool) { stool.visible = want && onStool; stool.position.x = -3.6; }
-      if (ktable) { ktable.visible = want && onStool; ktable.position.x = 14 / KIT; } }
+    if (table) { table.visible = st.showTable !== false && (st.to === 'table' || st.from === 'table' || st.showTable === true); table.position.x = tableEdgeX(sz); }
     B.step(jack, dt); scene.updateMatrixWorld(true);
     B.step(gerda, dt);
     updateHandles(); if (!ext) { controls.update(); renderer.render(scene, camera); }
@@ -781,7 +758,7 @@ function create(view, opts) {
     beats: GERDA_BEATS,
     bones: fig => Object.keys(BONES[bodyOf(fig)]).filter(n => (n !== 'paddle' || st.implement === 'paddle') && (n !== 'birch' || st.implement === 'birch')),
     // Can the scene be posed as it is? (the knee or the table, once he is there; the birch is for the table)
-    editable() { return st.blend >= 1 && (overTable(st.to) || (st.to === 'lap' && st.implement !== 'birch')); },
+    editable() { return st.blend >= 1 && (st.to === 'table' || (st.to === 'lap' && st.implement !== 'birch')); },
     // What is locked for a bone at a beat (as loaded), and the sliders' values: the edit relative to it.
     locked(fig, beat, bone) { const r = route(fig, beat, bone); const e = (((LOCK[posKey()][editKey][bodyOf(fig)][r.imp] || {})[r.beat]) || {})[bone]; return e ? JSON.parse(JSON.stringify(e)) : null; },
     // The sliders' values: absolute. The entry's own angles, or (no entry yet) the angles the bone has now from its standing position.
@@ -822,7 +799,7 @@ function create(view, opts) {
       }).join(',\n');
       const body = (set, ind) => WIELD.map(w => `${ind}    ${/^\w+$/.test(w) ? w : "'" + w + "'"}: {\n${dump(set[w], GERDA_BEATS, ind + '      ')},\n${ind}    }`).join(',\n');
       const one = (pos, k, ind) => { const e = SETS[pos][k]; return `${ind}${k}: {\n${ind}  gerda: {\n${body(e.gerda, ind)},\n${ind}  },\n${ind}  jack: {\n${body(e.jack, ind)},\n${ind}  },\n${ind}},`; };
-      return `root.LapPoses = {\n${one('lap', 100, '  ')}\n${one('lap', 50, '  ')}\n  table: {\n${one('table', 100, '    ')}\n${one('table', 50, '    ')}\n  },\n  stool: {\n${one('stool', 100, '    ')}\n${one('stool', 50, '    ')}\n  },\n};`;
+      return `root.LapPoses = {\n${one('lap', 100, '  ')}\n${one('lap', 50, '  ')}\n  table: {\n${one('table', 100, '    ')}\n${one('table', 50, '    ')}\n  },\n};`;
     },
   };
   // Move the scene to a place ('seat', 'lap', 'table', 'after'), taking `secs` for him to get there (0: at once).

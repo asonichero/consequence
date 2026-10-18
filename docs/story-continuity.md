@@ -12,7 +12,7 @@ A read of every line of dialogue and staging comment, in play order (the opening
 | Night scene, Jack quoting the Peddler | "they grow whatever we need" (said by the Peddler in one of three branches only) | "they root deeper than any coin" (said in all three) |
 | Night scene, Mother | "the third time this week" (the opening already counted three) | "the fourth time this week" |
 | Dressing scene, scene notes | choosing a face repainted his clothes as at the start of the scene | the face is painted on what he is wearing now |
-| The safe word | the notice promises Red in every scene; the breakfast correction and the bath's smack had none | both have the Red button; pressing it ends the smack at once, gently ("Red! No more, please!" / "Alright, Jack. I hear you. That is an end to it.") |
+| The safe word | the notice promises Red in every scene; the bath's smack had none (and the breakfast's correction) | the bath's smack has the Red button; pressing it ends the smack at once, gently ("Red! No more, please!" / "Alright, Jack. I hear you. That is an end to it."). The breakfast no longer has a correction: it is a chance to look about while Gerda's back is turned |
 | The "Debug: chores…" panel | shown to every player in the hen's room | shown only with `?debug` or from the level select |
 | Jack alone | his bath monologue, the castle hall and chest remarks, the box and the tunic, bedtime and waking were spoken aloud | all are spoken, and so is every thought the breakfast gives him: when he is alone he says what he thinks (the game's convention; nothing is unvoiced) |
 | Nursery truth/lie choice | he never said the truth he chose | he says it, then goes on |
