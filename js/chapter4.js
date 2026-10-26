@@ -129,8 +129,9 @@ async function run(G, W, opts) {
     const J1 = cl(52, 0); st.pos.copy(J1); st.heading = SEAT.ry + Math.PI; st.yaw = SEAT.ry + Math.PI; jackIn.root.position.copy(J1); jackIn.root.rotation.y = st.heading; paint({});
     for (let i = 0; i < 12; i++) { B.step(mother, 0.1); B.step(jackIn, 0.1); } B.seatFeet(mother, 0);
   };
+  await say('mother', 'You always promise, Jack.');       // (still over his shoulder, still standing)
   cutOnce('D', camD, seatHer);
-  await say('mother', 'You always promise, Jack.'); await sayD('Come here.');
+  await sayD('Come here.');
   await goTo(cl(15, 0), 4, 'Go to her.', camD);
   if (NOTES) { endInput(); G.updaters = G.updaters.filter(u => u !== tick); G.mode = 'end'; return { tier: 0, slip }; }
   // ── 5. The correction: over her knee, with the hand; shorter than the one at the close of Chapter One, and harder. ──
