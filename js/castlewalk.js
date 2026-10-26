@@ -1886,8 +1886,8 @@ function run(G, W, opts) {
       const Lg = M.room.userData.lights || {}, lampAt = (x, z) => (Lg.all || []).find(l => Math.abs(l.position.x - x) < 3 && Math.abs(l.position.z - z) < 3), kl = lampAt(170, -30); if (kl) kl.intensity = 0.7;
       if (Lg.hemi) { Lg.hemi.intensity = 0.55; Lg.hemi.color.setHex(0xffe6c0); Lg.hemi.groundColor.setHex(0x8a7a68); }
       let dayState = { outfit: 'Day', trousers: 'up', drawers: 'up', expr: 'smile' }; const paint = o => { Object.assign(dayState, o); W.paintJack(jackOut, dayState); }; G.bathPaint = () => paint({});
-      st.scene = true; st.frozen = true; st.fz = null; st.boxed = false; st.inHand = false; st.air = false; st.cl = null; st.mant = null; st.vy = 0; st.walkN = 0; st.choreTick = null; st.guard = null; st.pose = {}; st.s = st.s || G.ch3Size || 0.98; G.cwState = st;
-      jackOut.root.visible = gerda.root.visible = true; scene.attach(jackOut.root); jackOut.root.quaternion.identity(); jackOut.root.scale.setScalar(SC * st.s); G.setMode('beat', { skip: true }); st.camA = Math.PI / 2; st.pitch = 0.35; st.zoom = 1; camPos.set(0, 0, 0); $('cwPanel').style.display = 'none'; G.hud.objective(''); G.captionOff && G.captionOff();
+      st.scene = false; st.frozen = true; st.fz = null; st.boxed = false; st.inHand = false; st.air = false; st.cl = null; st.mant = null; st.vy = 0; st.walkN = 0; st.choreTick = null; st.guard = null; st.pose = {}; st.s = st.s || G.ch3Size || 0.98; G.cwState = st;
+      jackOut.root.visible = gerda.root.visible = true; scene.attach(jackOut.root); jackOut.root.quaternion.identity(); jackOut.root.scale.setScalar(SC * st.s); G.setMode('beat', { skip: true }); st.camA = 0; st.pitch = 0.14; st.zoom = 1; camPos.set(0, 0, 0); $('cwPanel').style.display = 'none'; G.hud.objective(''); G.captionOff && G.captionOff();       // (the camera is in front of them, low, looking back at the doors, and goes with them; it stays so when the player takes control)
       if (jackOut.gear) jackOut.gear.knife.visible = jackOut.gear.satchel.visible = jackOut.gear.flask.visible = false;
       const wr = () => gerda.wrist.localToWorld(new V3(0, -6, 0)), wl = () => gerda.wristL.localToWorld(new V3(0, -6, 0));
       // ── her hands (the helpers of the dressing) ──
@@ -1916,14 +1916,14 @@ function run(G, W, opts) {
       setLevel();
       // ── Gerda at the stove, with her back to the room: the hen's feed ──
       const STOVE = [118, -63];
-      Object.assign(gst, { x: 78, z: -26, h: Math.PI / 2, y: 0, seated: 0, kneel: 0, walk: 0, reach: 0, lreach: 0, bend: 0, look: 0.2, headY: 0, p50: null, hold: 0, alive: 1, sniff: 0, noSwingR: 0 }); placeGerda(); root.Blocky.step(gerda, 0);
+      Object.assign(gst, { x: 96, z: -26, h: Math.PI / 2, y: 0, seated: 0, kneel: 0, walk: 0, reach: 0, lreach: 0, bend: 0, look: 0.2, headY: 0, p50: null, hold: 0, alive: 1, sniff: 0, noSwingR: 0 }); placeGerda(); root.Blocky.step(gerda, 0);
       let stirring = false; const stirTick = () => { if (!stirring) return; gst.reach = 0.85 + 0.25 * Math.sin(G.t * 3.2); gst.bend = 0.14; gst.lreach = 0; placeGerda(); }; G.updaters.push(stirTick);
       const pail = new THREE.Group(); mk(6, 7, 6, '#7a5a3a', 0, 3.5, 0, pail); mk(5, 0.6, 5, '#d9b26a', 0, 6.8, 0, pail); pail.position.set(STOVE[0] + 2, 0, STOVE[1] + 14); scene.add(pail);       // (the hen's feed: what she measures out)
       const heldSay = t => G.caption('gerda', t);
       // ── 1. In from the hall, hand in hand ──
       put(66, 0, -16); st.heading = Math.PI / 2; jackOut.root.position.set(66, 0, -16);
       { const f = $('fade'); f.style.transition = 'none'; f.style.opacity = 1; void f.offsetWidth; f.style.transition = ''; }
-      paint({ expr: 'smile' }); if (A && A.ctx) A.startMusic({ theme: 'castle' }); G.cut({ pos: v(178, 30, -48), look: v(100, 20, -22), fov: 48 });       // (they come in through the hall's doors, mid-stride, toward the camera)
+      paint({ expr: 'smile' }); if (A && A.ctx) A.startMusic({ theme: 'castle' });       // (they come in through the hall's doors, mid-stride, toward the camera)
       { const hh = Math.PI / 2, lz = 3; let lx = -10; const wp = () => v(gst.x + lx * Math.cos(gst.h) + lz * Math.sin(gst.h), 0, gst.z - lx * Math.sin(gst.h) + lz * Math.cos(gst.h));
         gst.bend = 0; let best = { c: 1e9 }; const xAx = new V3(Math.cos(hh), 0, -Math.sin(hh)); const q0 = wp(); jackOut.root.position.set(q0.x, 0, q0.z); jackOut.root.rotation.set(0, hh, 0);
         for (const rc of [0, 0.2, 0.4, 0.6]) { gst.reach = rc; placeGerda(); root.Blocky.step(gerda, 0); gerda.root.updateMatrixWorld(true); const Wp = wr();
@@ -1932,7 +1932,7 @@ function run(G, W, opts) {
         const q1 = wp(); put(q1.x, 0, q1.z); st.heading = hh; st.walkN = 1;
         await G.fade(false, 1.2);
         const walkWith = async (tx, tz) => { while (Math.hypot(tx - gst.x, tz - gst.z) > 1) { const d = Math.hypot(tx - gst.x, tz - gst.z); gst.h += angDiff(Math.atan2(tx - gst.x, tz - gst.z), gst.h) * 0.25; gst.x += (tx - gst.x) / d * Math.min(0.6, d); gst.z += (tz - gst.z) / d * Math.min(0.6, d); gst.ph += 0.3; gst.walk = 0.7; placeGerda(); const q = wp(); put(q.x, 0, q.z); st.heading = gst.h; st.walkN = 1; st.walkPh += 0.38; { const sp = Math.floor(gst.ph / 4.8); if (sp !== stepAt3) { stepAt3 = sp; A && A.pad && A.pad(0.3); } } await G.wait(0.04); } gst.walk = 0; st.walkN = 0; placeGerda(); };
-        await walkWith(112, -22);
+        await walkWith(122, -22);
         { const b = solveArms(null, v(SX, TOP + 5, SZ - 12), 0.4); await pose({ lreach: b.lc, bend: b.bd }, 0.7); }       // (she points him to the bowl)
         await sayW('gerda', 'Here we are. Porridge, nice and hot, and waiting for you on the table.');
         { const a0 = { armLx: st.pose.armLx, armLz: st.pose.armLz, elbowL: st.pose.elbowL }; await Promise.all([rest(0.6), (async () => { for (let i = 1; i <= 14; i++) { const k = ease(i / 14); st.pose.armLx = W3(a0.armLx, 0.05, k); st.pose.armLz = W3(a0.armLz, 0.1, k); st.pose.elbowL = W3(a0.elbowL, 0, k); await G.wait(0.04); } })()]); gst.noSwingR = 0; }
@@ -1941,7 +1941,7 @@ function run(G, W, opts) {
       await sayW('gerda', 'Up you climb, little climber. I’ll be just here, with the hen’s feed.');
       await walkG([[STOVE[0], STOVE[1] + 10], [STOVE[0], STOVE[1]]]); await faceG(STOVE[0] - 10, STOVE[1], 0.5); stirring = true; gst.talk = 0;
       // ── 2. The kitchen is his: the stool, and the porridge; she asks him to keep to it, and he means to ──
-      st.scene = false; st.frozen = false; st.fz = null; st.camA = Math.atan2(-Math.cos(st.heading), -Math.sin(st.heading)); st.pitch = 0.4; st.zoom = 1; camPos.set(0, 0, 0); G.setMode('explore'); G.skipping = false; G.hideLine && G.hideLine();
+      st.scene = false; st.frozen = false; st.fz = null; G.setMode('explore'); G.skipping = false; G.hideLine && G.hideLine();
       G.hud.objective('Walk to the stool by the table and climb up. Stay in the kitchen: Gerda is close.'); G.cue.set('goal', { x: SX, z: SZ + 9, r: 14 });
       const Z = { x0: 94, x1: 246, z0: -108, z1: 50 }, wise = ['Better do as I’m told.', 'No. The stool, as she said.', 'Not now. Do as I’m told.']; let nWise = 0, tWise = 0;
       st.guard = () => { const p = st.pos; if (p.x < Z.x0 || p.x > Z.x1 || p.z < Z.z0 || p.z > Z.z1) { p.x = Math.max(Z.x0 + 1, Math.min(Z.x1 - 1, p.x)); p.z = Math.max(Z.z0 + 1, Math.min(Z.z1 - 1, p.z)); const now = performance.now(); if (now - tWise > 3500) { tWise = now; G.caption('jack', wise[nWise++ % wise.length]); } } };       // (kept in the kitchen by his own good sense: at the hall's doors, at the garden's, at the parlour's)
