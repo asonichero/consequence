@@ -70,15 +70,11 @@ async function run(G, W, opts) {
   const yawFor = c => Math.atan2(-(c.look.x - c.pos.x), -(c.look.z - c.pos.z));
   const room = x => clamp(x, -70, 70);
   const camA = { pos: v(46, 10, 68), look: v(6, 16, -24), fov: 56 };       // (east of the table's line, or it would stand between him and her)
-  let shotKey = null; const cutOnce = (k, spec) => { if (shotKey === k) return; shotKey = k; G.cut(spec); };       // (a beat is a camera angle: the same angle is not cut to twice running)
-  const wide = () => {       // (the pair of them from the far side, away from the table)
-    const a = mother.root.position, b = jackIn.root.position, mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2, dx = b.x - a.x, dz = b.z - a.z, n = Math.hypot(dx, dz) || 1, px = -dz / n, pz = dx / n, sg = pz > 0 ? -1 : 1;
-    cutOnce('wide', { pos: v(room(mx + px * sg * 78), 24, room(mz + pz * sg * 78)), look: v(mx, 15, mz), fov: 42 });
-  };
+  let shotKey = null; const cutOnce = (k, spec, fn) => { if (shotKey === k) return; shotKey = k; G.cut(spec, fn); };       // (a beat is a camera angle: the same angle is not cut to twice running)
   const axis = () => { const a = mother.root.position, b = jackIn.root.position, dx = b.x - a.x, dz = b.z - a.z, n = Math.hypot(dx, dz) || 1; return { a, b, ux: dx / n, uz: dz / n }; };       // (u: from her to him)
   const otsMother = () => { const { a, b, ux, uz } = axis(); cutOnce('M', { pos: v(room(b.x + ux * 10 - uz * 5), 14, room(b.z + uz * 10 + ux * 5)), look: v(a.x, mother.pose === 'sit' ? 17 : 22, a.z), fov: 46 }); };       // (over Jack's shoulder, to her)
   const otsJack = () => { const { a, b, ux, uz } = axis(); cutOnce('J', { pos: v(room(a.x - ux * 30 + uz * 20), 38, room(a.z - uz * 30 - ux * 20)), look: v(b.x, 9, b.z), fov: 46 }); };                 // (over her shoulder, down to him)
-  const camD = { pos: v(-46, 21, 31), look: v(-12.5, 12, -24), fov: 46 };       // (from the west: her reply, her calling him over, and his walk to her are all in this one angle)
+  const camD = { pos: v(-46, 21, 31), look: v(-12.5, 12, -24), fov: 46 };       // (from the west: her calling him over, and his walk to her, are in this one angle)
   const sayD = async t => { cutOnce('D', camD); await say('mother', t); };
   const sayM = async t => { otsMother(); await say('mother', t); }, sayJ = async t => { otsJack(); await say('jack', t); };
   // Walking to a place: his, until he is within r of it (in scene notes it is done for him, by way of the points).
@@ -105,7 +101,7 @@ async function run(G, W, opts) {
   cutOnce('A', camA); await G.wait(0.2); G.fade(false, 2.2); await G.wait(0.6);
   await goTo(M1, 28, 'Go to Mother.', camA, [[28, 45], [28, 0]]);
   // ── 2. What did you bring me? ──
-  await faceEach(); reset(); ma.side = 1; wide(); await G.wait(1.0);
+  await faceEach(); reset(); ma.side = 1; await G.wait(0.6);
   await sayM( 'Jack.'); await G.wait(0.5);
   await sayM( 'What did you bring me?');
   const a1 = await pickOf('jack', [['Nothing, Mother. I’m sorry.', 0], ['It’s coming. I only need a little longer.', 1], ['You never gave me the chance to finish!', 2], [{ act: 'Turn out your pockets' }, 0]]);
@@ -124,14 +120,17 @@ async function run(G, W, opts) {
   await sayM(['You were good, and what did it buy? Nothing in your hands.', 'The truth when it suits you, and a fib when it doesn’t, and home you come with nothing.', 'You lied, and you sulked, and you made a mess of every task you were given, and you come home with nothing.'][slip]);
   const a2 = await pickOf('jack', [['I’ll bring something, Mother. I promise.', 0], ['I was looked after. I had a bed.', 1], ['Perhaps I would, if you ever said a kind word!', 2]]);
   await sayJ( ['I’ll bring something, Mother. I promise.', 'I was looked after. I had a bed.', 'Perhaps I would, if you ever said a kind word!'][a2]);
-  await sayD(['You promise.', 'Looked after. And what did you promise them, Jack?', 'Kind words. I gave you those, and you promised me the world for them.'][a2]);       // (each answer is met, and each leads to the same: she has heard it before)
-  // ── 4. Come here: she is seated when the angle opens. ──
-  reset();
-  B.setPose(mother, 'sit'); mother.pose = 'sit'; mother.root.position.set(SEAT.x, STAGE_Y, SEAT.z); mother.root.rotation.y = SEAT.ry; ma.fold = 0; ma.side = 0;
+  await sayM(['You promise.', 'Looked after. And what did you promise them, Jack?', 'Kind words. I gave you those, and you promised me the world for them.'][a2]);       // (each answer is met, and each leads to the same: she has heard it before; she is still standing, over his shoulder)
+  // ── 4. Come here: she is seated when the angle opens (she sits between the shots, with nothing between them to see it), and the player goes to her in that same angle. ──
   const cl = (a, y, b) => v(SEAT.x + a * Math.sin(SEAT.ry) + (b || 0) * Math.cos(SEAT.ry), y, SEAT.z + a * Math.cos(SEAT.ry) - (b || 0) * Math.sin(SEAT.ry));
-  const J1 = cl(52, 0); st.pos.copy(J1); st.heading = SEAT.ry + Math.PI; st.yaw = SEAT.ry + Math.PI; jackIn.root.position.copy(J1); jackIn.root.rotation.y = st.heading; paint({});
-  for (let i = 0; i < 12; i++) { B.step(mother, 0.1); B.step(jackIn, 0.1); } B.seatFeet(mother, 0);
-  await sayD('You always promise, Jack.'); await sayD('Come here.');
+  const seatHer = () => {       // (done with the cut itself, so that nothing of it is seen in the shot before)
+    reset();
+    B.setPose(mother, 'sit'); mother.pose = 'sit'; mother.root.position.set(SEAT.x, STAGE_Y, SEAT.z); mother.root.rotation.y = SEAT.ry; ma.fold = 0; ma.side = 0;
+    const J1 = cl(52, 0); st.pos.copy(J1); st.heading = SEAT.ry + Math.PI; st.yaw = SEAT.ry + Math.PI; jackIn.root.position.copy(J1); jackIn.root.rotation.y = st.heading; paint({});
+    for (let i = 0; i < 12; i++) { B.step(mother, 0.1); B.step(jackIn, 0.1); } B.seatFeet(mother, 0);
+  };
+  cutOnce('D', camD, seatHer);
+  await say('mother', 'You always promise, Jack.'); await sayD('Come here.');
   await goTo(cl(15, 0), 4, 'Go to her.', camD);
   if (NOTES) { endInput(); G.updaters = G.updaters.filter(u => u !== tick); G.mode = 'end'; return { tier: 0, slip }; }
   // ── 5. The correction: over her knee, with the hand; shorter than the one at the close of Chapter One, and harder. ──
