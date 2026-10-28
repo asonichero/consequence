@@ -124,7 +124,7 @@ function run(G, W, opts) {
       if (open && !open.some(q => x > q[0] && x < q[1] && z > q[2] && z < q[3])) return true;
       if (st.perch && (x < st.perch.x0 || x > st.perch.x1 || z < st.perch.z0 || z > st.perch.z1)) return true;                      // (on a rung he cannot walk off: only jump)
       if (story && st.bread && x < -83.5 && z > -43 && z < -8) return true;                                  // (once he has smelt it, the narrow corridor's doors are as far as he goes)
-      for (const e of C.near(x, z, r)) { if (e.low || e.y1 <= up || e.y0 >= top) continue; if (e.shelf && st.shelfGhost && e.y0 > y + 3 * st.s) continue; const cx = clamp(x, e.x0, e.x1), cz = clamp(z, e.z0, e.z1); if ((x - cx) * (x - cx) + (z - cz) * (z - cz) < r * r) return true; } return false; };       // (the shelves above him do not stop his head, once he has the egg and the will to climb them)
+      for (const e of C.near(x, z, r)) { if (e.low || e.y1 <= up || e.y0 >= top) continue; const cx = clamp(x, e.x0, e.x1), cz = clamp(z, e.z0, e.z1); if ((x - cx) * (x - cx) + (z - cz) * (z - cz) < r * r) return true; } return false; };
     const floorAt = (x, z, y) => { const r = 1.2 * st.s, up = y + step() + 0.5; let g = 0; for (const e of C.near(x, z, r)) { if (e.y1 > up || e.y1 <= g) continue; const cx = clamp(x, e.x0, e.x1), cz = clamp(z, e.z0, e.z1); if ((x - cx) * (x - cx) + (z - cz) * (z - cz) < r * r) g = e.y1; } return g; };
     const ceilAt = p => (Math.abs(p.x) < 92 && Math.abs(p.z) < 112) ? root.Castle.HH : M.H;                     // (the hall's ceiling is higher)
     const roomBox = (x, z) => { let rm = null; for (const r of M.rooms || []) if (x > r.x0 && x < r.x1 && z > r.z0 && z < r.z1 && (!rm || (r.x1 - r.x0) * (r.z1 - r.z0) < (rm.x1 - rm.x0) * (rm.z1 - rm.z0))) rm = r; return rm; };       // (the roofed room that holds a place: its walls and ceiling)
@@ -426,7 +426,7 @@ function run(G, W, opts) {
         return to; };                                   // (the nearest spot of it that is clear of the wood above: the top of a leg that runs into the seat is no place to stand)
       const startMantle = (e, to) => { st.mant = { e, t: 0, dur: 0.85, from: { x: st.pos.x, y: st.y, z: st.pos.z }, to: { x: to[0], y: e.y1, z: to[1] } }; st.cl = null; st.vy = 0; };
       const findClimb = () => { const R = rj + 1.8 * s, fx = Math.sin(st.heading), fz = Math.cos(st.heading); let best = null;
-        for (const e of C.near(st.pos.x, st.pos.z, R + 2)) { if (!e.wood || e.low || e.y1 <= st.y + 0.45 * Hj || e.y0 > st.y + 0.5 * Hj) continue; const [qx, qz] = pointOn(e, st.pos.x, st.pos.z), dx = qx - st.pos.x, dz = qz - st.pos.z, d = Math.hypot(dx, dz);
+        for (const e of C.near(st.pos.x, st.pos.z, R + 2)) { if (!e.wood || e.low || (e.shelf && !st.rackLadder) || e.y1 <= st.y + 0.45 * Hj || e.y0 > st.y + 0.5 * Hj) continue; const [qx, qz] = pointOn(e, st.pos.x, st.pos.z), dx = qx - st.pos.x, dz = qz - st.pos.z, d = Math.hypot(dx, dz);
           if (d > R || (d > 0.01 && (dx * fx + dz * fz) / d < 0.2)) continue; if (!best || e.y1 > best.e.y1) best = { e, qx, qz, d }; }
         if (!best) return null; best.gap = best.e.y1 - st.y; return best.gap <= 0.5 * Hj ? null : best; };       // (what he could get his hands to just now, if anything)
       const tryClimb = () => { const best = findClimb(); if (!best) return false; const gap = best.gap, fx = Math.sin(st.heading), fz = Math.cos(st.heading); if (gap <= 0.75 * Hj) { const to = landingFor(best.e); if (to) { startMantle(best.e, to); return true; } }
@@ -441,8 +441,8 @@ function run(G, W, opts) {
         st.climbPh += dt * 9;
         if (st.cl.down) { st.y -= 0.8 * Hj * dt; let g = 0; for (const e of C.near(st.pos.x, st.pos.z, 3 * s + 2)) { if (e.y1 > st.cl.top - 0.01 || e.y1 <= g) continue; const cx = clamp(st.pos.x, e.x0, e.x1), cz = clamp(st.pos.z, e.z0, e.z1); if ((st.pos.x - cx) ** 2 + (st.pos.z - cz) ** 2 < (1.2 * s) ** 2) g = e.y1; } if (st.y <= g) { st.y = g; st.cl = null; st.vy = 0; } }
         else if (!keys.space || st.stam <= 0) { st.cl = null; }
-        else { const sp = 0.8 * Hj; st.y += sp * dt; st.stam -= sp * dt / (1.6 * Hj); let plat = null;
-          for (const e of C.near(st.pos.x, st.pos.z, 1.2 * Hj + 3)) { if (!e.wood || e.low || e.y1 <= st.y + 0.3 * Hj || e.y1 > st.y + 1.3 * Hj) continue; const [qx, qz] = pointOn(e, st.pos.x, st.pos.z); if (Math.hypot(qx - st.pos.x, qz - st.pos.z) > 0.8 * Hj) continue; if (!landingFor(e)) continue; if (!plat || e.y1 > plat.y1) plat = e; }
+        else { const sp = 0.8 * Hj; st.y += sp * dt; if (!(st.rackLadder && st.cl.e && st.cl.e.shelf)) st.stam -= sp * dt / (1.6 * Hj); let plat = null;       // (the rack is a ladder to him, and he does not tire on it)
+          for (const e of C.near(st.pos.x, st.pos.z, 1.2 * Hj + 3)) { if (!e.wood || e.low || e.y1 <= st.y + 0.3 * Hj || e.y1 > st.y + 1.3 * Hj || (e.shelf && (!st.rackLadder || e.y1 > st.y + 0.55 * Hj))) continue; const [qx, qz] = pointOn(e, st.pos.x, st.pos.z); if (Math.hypot(qx - st.pos.x, qz - st.pos.z) > 0.8 * Hj) continue; if (!landingFor(e)) continue; if (!plat || e.y1 > plat.y1) plat = e; }
           if (plat) startMantle(plat, landingFor(plat)); }
       }
       if (!busy || (!st.cl && !st.mant)) {
@@ -966,7 +966,7 @@ function run(G, W, opts) {
         if (bird) for (const a of [-0.5, 0, 0.5]) { const t = mk(0.5, 0.2, 2.2, '#3a2a18', Math.sin(a) * 1.3, 0, Math.cos(a) * 1.3, g); t.rotation.y = a; } else { mk(2.6 * size, 0.2, 6 * size, '#3a2a18', 0, 0, 0, g); mk(2 * size, 0.2, 1.6 * size, '#3a2a18', 0, 0, 3.8 * size, g); }
         M.room.add(g); prints.push({ g, x, z, amount: 1 }); if (prints.length > 90) { const o = prints.shift(); M.room.remove(o.g); } };
       const S = {}, H = { pos: new V3(), target: new V3() };
-      const freshS = () => ({ sitting: false, dirt: 0, stride: 0, foot: 1, holding: null, water: 0, spillAcc: 0, spillCool: 0, chores: { sweep: false, dish: false, water: false, trust: false }, troughLevel: 0, speedN: 0, mv: 0, px: st.pos.x, pz: st.pos.z, stroke: 0, sweeping: false, sweepT: 99, workP: null, soothedAt: 0, soothN: 0, messN: 0, t: 0, done: false, doneAt: 0, scooping: false, binOpen: false, binRaids: 0, squawkT: 0, lie: false, sTarget: st.s, ended: false, egg: 0, taking: false, tuck: false, sqAt: 0, w0: 0, grew: {}, hint: 0 });
+      const freshS = () => ({ sitting: false, dirt: 0, stride: 0, foot: 1, holding: null, water: 0, spillAcc: 0, spillCool: 0, chores: { sweep: false, dish: false, water: false, trust: false }, troughLevel: 0, speedN: 0, mv: 0, px: st.pos.x, pz: st.pos.z, stroke: 0, sweeping: false, sweepT: 99, workP: null, soothedAt: 0, soothN: 0, messN: 0, t: 0, done: false, doneAt: 0, scooping: false, binOpen: false, binRaids: 0, squawkT: 0, lie: false, sTarget: st.s, ended: false, egg: 0, taking: false, tuck: false, sqAt: 0, w0: 0, grew: {}, hint: 0, opening: false, winP: 0, winOpen: false, atTop: false, asking: false, askT: 0, layAt: 0 });
       const freshH = () => ({ mode: 'rest', trust: 50, restLeft: 15, timer: 2, cool: 0, heading: Math.PI, bob: 0, y: 9, scratch: 0, coax: 0, dirt: 0, stride: 0, tgtP: null, dirtWait: 0, sndT: 2, drinkT: 14, drink: 0, splashCool: 0, binCool: 0, binWait: 0 });
       const restFor = t => t >= 100 ? Infinity : 5 + 0.2 * t;       // (as in the test level: at least five seconds, two more for every ten per cent of trust, and at full trust she stays)
       const itm = { broom: { where: 'home', x: 0, z: 0 }, bucket: { where: 'home', x: 0, z: 0 } };
@@ -1007,9 +1007,12 @@ function run(G, W, opts) {
       const cluck = (kind, v0) => { A && A.cluck && A.cluck(kind, v0); };
       // day two: the golden egg. Laid on the cushion's edge; folded into the front of his tunic when he takes it
       const eggMesh = par => { mk(3.2, 1.2, 3.2, '#e8b830', 0, 0.6, 0, par); mk(4.6, 3.6, 4.6, '#f4c840', 0, 3, 0, par); mk(3.4, 1.6, 3.4, '#e8b830', 0, 5.6, 0, par); mk(1.8, 0.8, 1.8, '#f8da70', 0, 6.8, 0, par); };
-      const eggG = new THREE.Group(); eggMesh(eggG); eggG.scale.setScalar(1.3); eggG.visible = false; M.room.add(eggG);
-      const eggAt = new V3(cushion.x + 8, 9, cushion.z + 2), eggT = new THREE.Group(); eggMesh(eggT); eggT.scale.setScalar(0.5); eggT.position.set(0, 3.6, 3.4); eggT.visible = false; jackOut.torso.add(eggT);       // (the bulge in his tunic)
+      const eggG = new THREE.Group(); eggMesh(eggG); eggG.scale.setScalar(0.7); eggG.visible = false; M.room.add(eggG);
+      const eggAt = new V3(cushion.x + 8, 9, cushion.z + 2), eggT = new THREE.Group(); eggMesh(eggT); eggT.scale.setScalar(0.32); eggT.position.set(0, 3.6, 3.4); eggT.visible = false; jackOut.torso.add(eggT);       // (the bulge in his tunic)
       const takeEgg = async () => {       // (he folds it into the front of his tunic, and the hen takes it ill)
+        if (S.egg !== 1 || S.asking) return; S.asking = true; st.frozen = true;
+        const c = await G.choose('jack', ['Take it. It’s all I can carry home.', 'Leave it. It isn’t mine.']); st.frozen = false; S.asking = false;
+        if (c === 1) { S.askT = S.t + 4; G.caption('jack', 'No. It isn’t mine to take.'); return; }
         if (S.egg !== 1) return; S.egg = 2; S.taking = true; S.egg2At = S.t; S.w0 = S.sTarget; H.trust = Math.max(0, H.trust - 10);
         for (let k = 1; k <= 10; k++) { st.pose = { neckX: 0.55 * k / 10, torso: 0.35 * k / 10, armLx: -0.9 * k / 10, armRx: -0.9 * k / 10, elbowL: -0.5 * k / 10, elbowR: -0.5 * k / 10 }; await G.wait(0.04); }
         eggG.visible = false; eggT.visible = true; A && A.blip && A.blip(); await G.wait(0.2);
@@ -1017,7 +1020,7 @@ function run(G, W, opts) {
         S.taking = false; S.tuck = true; shrink(0.03, 'Taking the egg');
         G.caption('jack', 'Forgive me. It’s all I can carry, and Mother’s frantic.'); setTimeout(() => { if (S.egg === 2) G.caption('jack', 'Those shelves, by the window… I could probably climb them.'); }, 3600);
       };
-      const putEgg = () => { if (S.egg !== 2) return; S.egg = 1; S.tuck = false; eggT.visible = false; eggG.visible = true; S.sTarget = S.w0; S.sqAt = 0; S.listKey = ''; G.cue.set('goal', null); G.hud.objective(''); A && A.blip && A.blip(); G.caption('jack', 'No. It’s hers. Back it goes.'); };
+      const putEgg = () => { if (S.egg !== 2) return; S.egg = 1; S.tuck = false; eggT.visible = false; eggG.visible = true; S.sTarget = S.w0; S.sqAt = 0; S.listKey = ''; S.opening = false; G.hud.meter('window', null); G.cue.set('goal', null); G.hud.objective(''); A && A.blip && A.blip(); G.caption('jack', 'No. It’s hers. Back it goes.'); };
       const TUCK = { armLx: -0.75, armRx: -0.75, armLz: -0.2, armRz: 0.2, elbowL: -1.2, elbowR: -1.2, torso: 0.12, neckX: 0.25 };
       const SFIT = 0.42, pctNow = () => st.s / FULL * 100;       // (a window's height to a boy: he fits it at about three tenths of his size)
       const updateHen = dt => {
@@ -1104,7 +1107,7 @@ function run(G, W, opts) {
         for (const q of prints) M.room.remove(q.g); prints.length = 0;
         Object.assign(S, freshS()); Object.assign(H, freshH()); H.pos.set(cushion.x, 0, cushion.z); H.restLeft = restFor(H.trust);
         itm.broom.where = itm.bucket.where = 'home'; setHeld(null); lid.rotation.x = 0; gp('henDish').userData.grain.visible = false; setTrough();
-        hen.position.set(cushion.x, 9, cushion.z); hen.rotation.set(0, Math.PI, 0); hen.visible = true; S.sTarget = st.s; eggG.visible = false; eggT.visible = false; G.cue.set('goal', null); st.jumpBoost = 1; st.shelfGhost = false;
+        hen.position.set(cushion.x, 9, cushion.z); hen.rotation.set(0, Math.PI, 0); hen.visible = true; S.sTarget = st.s; eggG.visible = false; eggT.visible = false; G.cue.set('goal', null); st.jumpBoost = 1; st.rackLadder = false;
       };
       const playRound = () => new Promise(resolve => {
         if (!D2) G.save({ step: 'ch3chorework', chSize: st.s });       // (a save point: the work begins)
@@ -1136,15 +1139,18 @@ function run(G, W, opts) {
             // the chores done well put some of him back
             for (const c of ['sweep', 'dish', 'water', 'trust']) if (S.chores[c] && !S.grew[c] && S.egg !== 2) { S.grew[c] = 1; S.sTarget = Math.min(0.8 * FULL, S.sTarget + 0.03 * FULL); toast('A job well done: +3%', 2400); }
             // she lays, before she has quite given him her trust: settled on her cushion, and warming to him
-            if (!S.egg && H.mode === 'rest' && onCushion(H.pos) && S.t > 12 && (H.trust >= 55 || H.trust >= 100)) { S.egg = 1; eggG.position.copy(eggAt); eggG.visible = true; cluck('content', 1); A && A.blip && A.blip(); toast('The hen shifts, and clucks, and there is a golden egg in her nest.', 4200); G.caption('jack', 'An egg. A golden one, as big as my head.'); }
-            st.jumpBoost = S.egg === 2 ? 1.3 : 1; st.shelfGhost = S.egg === 2;       // (with the egg in his tunic and the door shut, he jumps higher than he should)
+            if (!S.egg && H.mode === 'rest' && onCushion(H.pos) && S.t > 12 && H.trust >= 55) { S.egg = 0.5; S.layAt = S.t; cluck('content', 1); }       // (laid under her: it is seen when she gets up)
+            if (S.egg === 0.5 && (H.mode !== 'rest' || S.t - S.layAt > 25)) { S.egg = 1; eggG.position.copy(eggAt); eggG.visible = true; A && A.blip && A.blip(); st.lockH = Math.atan2(eggAt.x - st.pos.x, eggAt.z - st.pos.z); st.lockT = 2.6; G.caption('jack', 'An egg. A golden one, no bigger than my fist.'); toast('The hen has left a golden egg in her nest.', 4200); }       // (and he stops what he is doing to look)
+            st.jumpBoost = S.egg === 2 ? 1.3 : 1; st.rackLadder = S.egg === 2;       // (with the egg in his tunic and the door shut, he jumps higher than he should)
             if (S.egg === 2) {
               const p = clamp((st.y - 4) / 36, 0, 1);       // (how far up he is: the higher, the smaller, till he would fit the window)
               S.sTarget = S.w0 * (1 - 0.6 * p);
               if (!S.sqAt && p >= clamp(0.9 * H.trust / 100, 0.08, 0.9)) { S.sqAt = S.t; cluck('squawk'); if (H.mode !== 'flee') flee(st.pos); G.caption('jack', 'Shh! Hush, girl, hush!'); toast('The hen squawks!', 2600); }
-              if (st.y >= 43 && st.pos.z < -306 && st.pos.x > 284 && st.pos.x < 322) end('climb', { window: true }); else if (S.sqAt && S.t - S.sqAt > (H.trust >= 95 ? 7 : 4)) end('climb', { window: p >= 0.85 });       // (she is some way off: at full trust, long enough for him to be at the top)
+              S.atTop = st.y >= 43 && st.pos.z < -310 && st.pos.x > 296 && st.pos.x < 318;
+              if (S.opening) { if (!S.atTop) { S.opening = false; S.winP = 0; G.hud.meter('window', null); } else { S.winP += dt / 3.5; st.pose = { armLx: -2.6, armRx: -2.6, armLz: 0.15, armRz: -0.15, neckX: -0.3 }; G.hud.meter('window', { label: 'Opening the window', value: Math.min(1, S.winP), text: '' }); if (S.winP >= 1) { S.winOpen = true; G.hud.meter('window', null); A && A.thud && A.thud(0.5); end('climb', { window: true }); } } }
+              if (S.sqAt && S.t - S.sqAt > (H.trust >= 95 ? 7 : 4)) end('climb', { window: false });       // (she is some way off: at full trust, long enough for him to be at the top)
               if (S.listKey !== 'out') { S.listKey = 'out'; G.hud.objective('The door is shut. Find another way out.'); G.cue.set('goal', { x: 308, z: -318, r: 14 }); }
-              if (!S.hint && S.t - S.egg2At > 12) { S.hint = 1; toast('Climb the crates and the shelves, up to the high window. Smaller, you will fit.', 6000); }
+              if (!S.hint && S.t - S.egg2At > 12) { S.hint = 1; toast('Climb the rack and the crates to the high window, and open it. Smaller, you will fit.', 6000); }
             }
           }
           if (H.trust >= 100 && H.mode === 'rest' && !S.chores.trust) { S.chores.trust = true; toast('The hen settles on her cushion, and lets you near. ✔', 3000); }
@@ -1158,7 +1164,8 @@ function run(G, W, opts) {
             else { if (S.holding === 'broom') addQ(rackP, 28, 'Hang up the broom', () => putHome('broom')); if (S.holding === 'bucket') addQ(buckP, 24, 'Put the bucket back', () => { if (S.water > 0) dumpWater('Putting it back full'); putHome('bucket'); }); if (S.holding === 'grain') addQ(binP, 26, 'Tip it back', () => setHeld(null)); fQ = { d: 1e9, label: 'Put it down', fn: drop }; }
             if (S.holding !== 'broom' && S.holding !== 'bucket') addE(binP, 26, S.binOpen ? 'Close the bin' : 'Open the bin', S.binOpen ? closeBin : openBin);       // (not with the broom or the bucket in his hands)
             if (!S.holding) addE(chairP, 26, 'Sit on the chair', sit);
-            if (D2 && S.egg === 1 && !S.holding && !S.taking && dist(eggAt) < 24) bE = { d: 0, label: 'Take the egg', fn: takeEgg, p: eggAt };       // (the egg before the hen, when they are both in reach)
+            if (D2 && S.egg === 1 && !S.holding && !S.taking && !S.asking && S.t >= (S.askT || 0) && dist(eggAt) < 24) bE = { d: 0, label: 'Take the egg', fn: takeEgg, p: eggAt };       // (the egg before the hen, when they are both in reach)
+            if (D2 && S.egg === 2 && S.atTop && !S.opening && !S.winOpen) bE = { d: 0, label: 'Open the window', fn: () => { S.opening = true; S.winP = 0; A && A.latch && A.latch(); G.caption('jack', 'Stiff. Come on…'); }, p: new V3(308, 46, -326) };
             if (D2 && S.egg === 2 && !S.taking && st.y < 3 && Math.hypot(eggAt.x - st.pos.x, eggAt.z - st.pos.z) < 26) addQ(eggAt, 26, 'Put the egg back', putEgg);
             if (S.holding === 'broom') fE = { d: 1e9, label: 'Sweep', fn: () => { S.stroke = 0.9; } };
             if (S.holding === 'bucket') { addE(wellP, 32, S.water < BUCKET ? 'Fill the bucket' : 'Full', () => { if (S.water < BUCKET) { S.water = BUCKET; S.spillAcc = 0; toast('You fill the bucket. Walk, so that it does not slop.', 2600); } }); if (S.water > 0) addE(troughP, 34, 'Pour into the trough', pour); if (S.water > 0) fE = { d: 1e9, label: 'Pour it out', fn: () => dumpWater('Pouring the water out') }; }
@@ -1267,7 +1274,7 @@ function run(G, W, opts) {
       const openDoor = async () => { const a1 = (doorTo(Math.PI / 2, true), roostD ? roostD.lg.rotation.y : 0); if (roostD) { roostD.lg.rotation.y = 0; roostD.og.userData.noCollide = true; A && A.latch && A.latch(); for (let i = 1; i <= 24; i++) { roostD.lg.rotation.y = a1 * ease(i / 24); await G.wait(0.04); } roostD.lg.rotation.y = a1; } };
       const gIn = () => { Object.assign(gst, { x: 273, z: -196, h: Math.PI, y: 0, seated: 0, walk: 0, reach: 0, lreach: 0, bend: 0, look: 0.2, headY: 0, p50: null, hold: 0, alive: 1 }); placeGerda(); gerda.root.visible = true; };
       const seatGerda = cp => { Object.assign(gst, { x: cp.x, z: cp.z, h: -Math.PI / 2, y: 5.1, seated: 1, walk: 0, reach: 0, lreach: 0, bend: 0, look: 0.3, headY: 0, p50: null, hold: 0, alive: 1 }); gerda.root.visible = true; placeGerda(); root.Blocky.step(gerda, 0); root.Blocky.seatFeet && root.Blocky.seatFeet(gerda, 0); };
-      const freezeJack = () => { st.choreTick = null; st.jumpBoost = 1; st.shelfGhost = false; G.hud.meter('trust', null); dbgEl.style.display = 'none'; G.hud.objective(''); G.cue.set('goal', null); st.uiAct = null; st.uiDrop = false; G.captionOff && G.captionOff(); st.scene = true; G.mode = 'cutscene'; st.cl = null; st.mant = null; st.vy = 0; st.walkN = 0; st.jumpReq = false; st.air = false; st.seated = false; };
+      const freezeJack = () => { st.choreTick = null; st.jumpBoost = 1; st.rackLadder = false; G.hud.meter('trust', null); dbgEl.style.display = 'none'; G.hud.objective(''); G.cue.set('goal', null); st.uiAct = null; st.uiDrop = false; G.captionOff && G.captionOff(); st.scene = true; G.mode = 'cutscene'; st.cl = null; st.mant = null; st.vy = 0; st.walkN = 0; st.jumpReq = false; st.air = false; st.seated = false; };
       const W3s = (a, b, k) => a + (b - a) * k;
       // at the window: she is in time to see him, and not in time to stop him
       const escapeScene = async () => {
