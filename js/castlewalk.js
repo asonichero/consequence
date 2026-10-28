@@ -966,7 +966,7 @@ function run(G, W, opts) {
         if (bird) for (const a of [-0.5, 0, 0.5]) { const t = mk(0.5, 0.2, 2.2, '#3a2a18', Math.sin(a) * 1.3, 0, Math.cos(a) * 1.3, g); t.rotation.y = a; } else { mk(2.6 * size, 0.2, 6 * size, '#3a2a18', 0, 0, 0, g); mk(2 * size, 0.2, 1.6 * size, '#3a2a18', 0, 0, 3.8 * size, g); }
         M.room.add(g); prints.push({ g, x, z, amount: 1 }); if (prints.length > 90) { const o = prints.shift(); M.room.remove(o.g); } };
       const S = {}, H = { pos: new V3(), target: new V3() };
-      const freshS = () => ({ sitting: false, dirt: 0, stride: 0, foot: 1, holding: null, water: 0, spillAcc: 0, spillCool: 0, chores: { sweep: false, dish: false, water: false, trust: false }, troughLevel: 0, speedN: 0, mv: 0, px: st.pos.x, pz: st.pos.z, stroke: 0, sweeping: false, sweepT: 99, workP: null, soothedAt: 0, soothN: 0, messN: 0, t: 0, done: false, doneAt: 0, scooping: false, binOpen: false, binRaids: 0, squawkT: 0, lie: false, sTarget: st.s, ended: false, egg: 0, taking: false, tuck: false, sqAt: 0, w0: 0, grew: {}, hint: 0, opening: false, winP: 0, winOpen: false, atTop: false, asking: false, askT: 0, layAt: 0 });
+      const freshS = () => ({ sitting: false, dirt: 0, stride: 0, foot: 1, holding: null, water: 0, spillAcc: 0, spillCool: 0, chores: { sweep: false, dish: false, water: false, trust: false }, troughLevel: 0, speedN: 0, mv: 0, px: st.pos.x, pz: st.pos.z, stroke: 0, sweeping: false, sweepT: 99, workP: null, soothedAt: 0, soothN: 0, messN: 0, t: 0, done: false, doneAt: 0, scooping: false, binOpen: false, binRaids: 0, squawkT: 0, lie: false, sTarget: st.s, ended: false, egg: 0, taking: false, tuck: false, sqAt: 0, w0: 0, grew: {}, hint: 0, opening: false, noRest: 0, winP: 0, winOpen: false, atTop: false, asking: false, askT: 0, layAt: 0 });
       const freshH = () => ({ mode: 'rest', trust: 50, restLeft: 15, timer: 2, cool: 0, heading: Math.PI, bob: 0, y: 9, scratch: 0, coax: 0, dirt: 0, stride: 0, tgtP: null, dirtWait: 0, sndT: 2, drinkT: 14, drink: 0, splashCool: 0, binCool: 0, binWait: 0 });
       const restFor = t => t >= 100 ? Infinity : 5 + 0.2 * t;       // (as in the test level: at least five seconds, two more for every ten per cent of trust, and at full trust she stays)
       const itm = { broom: { where: 'home', x: 0, z: 0 }, bucket: { where: 'home', x: 0, z: 0 } };
@@ -1013,7 +1013,7 @@ function run(G, W, opts) {
         if (S.egg !== 1 || S.asking) return; S.asking = true; st.frozen = true;
         const c = await G.choose('jack', ['Take it. It’s all I can carry home.', 'Leave it. It isn’t mine.']); st.frozen = false; S.asking = false;
         if (c === 1) { S.askT = S.t + 4; G.caption('jack', 'No. It isn’t mine to take.'); return; }
-        if (S.egg !== 1) return; S.egg = 2; S.taking = true; S.egg2At = S.t; S.w0 = S.sTarget; H.trust = Math.max(0, H.trust - 10);
+        if (S.egg !== 1) return; S.egg = 2; S.taking = true; S.egg2At = S.t; S.w0 = S.sTarget; H.trust = Math.max(0, H.trust - 20);
         for (let k = 1; k <= 10; k++) { st.pose = { neckX: 0.55 * k / 10, torso: 0.35 * k / 10, armLx: -0.9 * k / 10, armRx: -0.9 * k / 10, elbowL: -0.5 * k / 10, elbowR: -0.5 * k / 10 }; await G.wait(0.04); }
         eggG.visible = false; eggT.visible = true; A && A.blip && A.blip(); await G.wait(0.2);
         for (let k = 1; k <= 8; k++) { st.pose = Object.assign({}, TUCK, { neckX: 0.55 + (0.25 - 0.55) * k / 8 }); await G.wait(0.04); }
@@ -1052,7 +1052,7 @@ function run(G, W, opts) {
           if (sneaking && S.speedN > 1 && d < ALARM_R) { const away = H.pos.clone().sub(st.pos); away.y = 0; away.normalize(); const tc = new V3(cushion.x - H.pos.x, 0, cushion.z - H.pos.z); if (tc.lengthSq() > 0.01) tc.normalize(); const dir = away.addScaledVector(tc, 1.3); if (dir.lengthSq() > 0.01) dir.normalize(); H.pos.addScaledVector(dir, 9 * dt); H.heading = Math.atan2(dir.x, dir.z); H.coax = 1.2; H.timer = 2; }       // (she moves on ahead of him, but leaning toward her cushion: so that creeping at her leads her there)       // (sneaking up on her, she moves on a little ahead of him: so that he can corral her)
           else if (H.drinkT <= 0 && S.troughLevel > 10) { H.mode = 'drink'; H.drink = 0; }       // (when there is water, she drinks from it at intervals)
           else { H.timer -= dt; const dd = Math.hypot(H.target.x - H.pos.x, H.target.z - H.pos.z); if (dd > 1) { H.pos.x += (H.target.x - H.pos.x) / dd * Math.min(dd, 9 * dt); H.pos.z += (H.target.z - H.pos.z) / dd * Math.min(dd, 9 * dt); H.heading = Math.atan2(H.target.x - H.pos.x, H.target.z - H.pos.z); } if (H.timer <= 0) { H.timer = 3 + Math.random() * 5; H.target = roam(); } }
-          if (onCushion(H.pos) && (H.coax > 0 || H.trust >= 100)) startRest();
+          if (onCushion(H.pos) && (H.coax > 0 || H.trust >= 100) && S.t >= (S.noRest || 0)) startRest();
         }
         if (H.mode !== 'rest' && d < 20 && S.speedN < 2) H.trust = Math.min(100, H.trust + 3 * dt);       // (still and close, she warms a little)
         H.pos.x = clamp(H.pos.x, 264, 410); H.pos.z = clamp(H.pos.z, -322, -222);
@@ -1139,8 +1139,8 @@ function run(G, W, opts) {
             // the chores done well put some of him back
             for (const c of ['sweep', 'dish', 'water', 'trust']) if (S.chores[c] && !S.grew[c] && S.egg !== 2) { S.grew[c] = 1; S.sTarget = Math.min(0.8 * FULL, S.sTarget + 0.03 * FULL); toast('A job well done: +3%', 2400); }
             // she lays, before she has quite given him her trust: settled on her cushion, and warming to him
-            if (!S.egg) { S.egg = 0.5; S.layAt = S.t; }       // (under her from the start: it is seen the first time she gets up)
-            if (S.egg === 0.5 && (H.mode !== 'rest' || (H.trust >= 100 && S.t - S.layAt > 25))) { S.egg = 1; eggG.position.copy(eggAt); eggG.visible = true; A && A.blip && A.blip(); st.lockH = Math.atan2(eggAt.x - st.pos.x, eggAt.z - st.pos.z); st.lockT = 2.6; G.caption('jack', 'An egg. A golden one, no bigger than my fist.'); toast('The hen has left a golden egg in her nest.', 4200); }       // (and he stops what he is doing to look)
+            if (!S.egg && H.mode === 'rest' && onCushion(H.pos) && S.t > 12) { S.egg = 0.5; S.layAt = S.t; S.noRest = S.t + 10; cluck('content', 1); H.mode = 'wander'; H.timer = 1.5; H.target = roam(); H.coax = 0; }       // (she lays, and gets up, whatever her trust)
+            if (S.egg === 0.5 && H.mode !== 'rest') { S.egg = 1; eggG.position.copy(eggAt); eggG.visible = true; A && A.blip && A.blip(); st.lockH = Math.atan2(eggAt.x - st.pos.x, eggAt.z - st.pos.z); st.lockT = 2.6; G.caption('jack', 'An egg. A golden one, no bigger than my fist.'); toast('The hen has left a golden egg in her nest.', 4200); }       // (and he stops what he is doing to look)
             st.jumpBoost = S.egg === 2 ? 1.3 : 1; st.rackLadder = S.egg === 2;       // (with the egg in his tunic and the door shut, he jumps higher than he should)
             if (S.egg === 2) {
               const p = clamp((st.y - 4) / 36, 0, 1);       // (how far up he is: the higher, the smaller, till he would fit the window)
