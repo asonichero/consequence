@@ -56,6 +56,7 @@ function run(G, W, opts) {
       { const crack = new THREE.Mesh(new THREE.BoxGeometry(3.4, 4.6, 0.5), new THREE.MeshBasicMaterial({ color: 0xfff1c4 })); crack.position.set(0, 2.3, 108.5); M.scene.add(crack); }
     }
     const C = collect(M.room, ceiling, M.items.pantry && M.items.pantry.g);
+    G.cwColl = C;       // (for tools and tests)
     const things = []; if (story) { M.room.updateMatrixWorld(true); M.room.traverse(o => { if (o.userData && o.userData.item) { const w = new V3(); o.getWorldPosition(w); things.push(Object.assign({ o, pos: w }, o.userData.item)); } }); }
     { const pj = W.paintJack; let lastBeat = -1; W.paintJack = (rig, o) => { if (rig === jackOut && G.exprOverride) { const e = G.exprOverride(G.beat); if (e) o = Object.assign({}, o, { expr: e }); } return pj.call(W, rig, o); };
       G.refreshExpr = () => { const e = G.exprOverride && G.exprOverride(G.beat); if (e) { if (G.bathPaint) G.bathPaint(); else pj.call(W, jackOut, { expr: e }); } };      // (the scene notes can choose his face for a beat; it holds for the whole of it)
@@ -423,14 +424,14 @@ function run(G, W, opts) {
         let to = null, bd = 1e9; for (let i = 0; i <= 16; i++) for (let j = 0; j <= 16; j++) { const x = x0 + (x1 - x0) * i / 16, z = z0 + (z1 - z0) * j / 16; if (blockedAt(x, z, e.y1)) continue; const d = Math.hypot(x - st.pos.x, z - st.pos.z); if (d < bd) { bd = d; to = [x, z]; } }
         return to; };                                   // (the nearest spot of it that is clear of the wood above: the top of a leg that runs into the seat is no place to stand)
       const startMantle = (e, to) => { st.mant = { e, t: 0, dur: 0.85, from: { x: st.pos.x, y: st.y, z: st.pos.z }, to: { x: to[0], y: e.y1, z: to[1] } }; st.cl = null; st.vy = 0; };
-      const findClimb = () => { const R = rj + 1.2 * s, fx = Math.sin(st.heading), fz = Math.cos(st.heading); let best = null;
+      const findClimb = () => { const R = rj + 1.8 * s, fx = Math.sin(st.heading), fz = Math.cos(st.heading); let best = null;
         for (const e of C.near(st.pos.x, st.pos.z, R + 2)) { if (!e.wood || e.low || e.y1 <= st.y + 0.45 * Hj || e.y0 > st.y + 0.5 * Hj) continue; const [qx, qz] = pointOn(e, st.pos.x, st.pos.z), dx = qx - st.pos.x, dz = qz - st.pos.z, d = Math.hypot(dx, dz);
           if (d > R || (d > 0.01 && (dx * fx + dz * fz) / d < 0.2)) continue; if (!best || e.y1 > best.e.y1) best = { e, qx, qz, d }; }
         if (!best) return null; best.gap = best.e.y1 - st.y; return best.gap <= 0.5 * Hj ? null : best; };       // (what he could get his hands to just now, if anything)
       const tryClimb = () => { const best = findClimb(); if (!best) return false; const gap = best.gap, fx = Math.sin(st.heading), fz = Math.cos(st.heading); if (gap <= 0.75 * Hj) { const to = landingFor(best.e); if (to) { startMantle(best.e, to); return true; } }
         let nx = st.pos.x - best.qx, nz = st.pos.z - best.qz; const nl = Math.hypot(nx, nz); if (nl < 0.01) { nx = -fx; nz = -fz; } else { nx /= nl; nz /= nl; }
         st.pos.x = best.qx + nx * 6.5 * s; st.pos.z = best.qz + nz * 6.5 * s; st.heading = Math.atan2(-nx, -nz); st.cl = { e: best.e }; st.stam = 1; st.vy = 0; st.perch = null; return true; };
-      if (st.jumpReq) { st.jumpReq = false; if (!busy && st.y <= gy + 0.01 && !(downReady() && startDown()) && !tryClimb()) { st.vy = 112 * s; st.perch = null; } }
+      if (st.jumpReq) { st.jumpReq = false; if (!busy && st.y <= gy + 0.01 && !(downReady() && startDown()) && !tryClimb()) { st.vy = 112 * s * (st.jumpBoost || 1); st.perch = null; } }
       if (st.mant) { const m = st.mant; m.t += dt; const k = clamp(m.t / m.dur, 0, 1), rise = Math.max(m.from.y, m.to.y + 0.22 * Hj);                // (up the face to above the lip, then over the edge and down onto the top: the edge climbs as the leg did)
         if (k < 0.5) { const q = k / 0.5, e2 = q * q * (3 - 2 * q); st.pos.x = m.from.x; st.pos.z = m.from.z; st.y = m.from.y + (rise - m.from.y) * e2; }
         else { const q = (k - 0.5) / 0.5, e2 = q * q * (3 - 2 * q); st.pos.x = m.from.x + (m.to.x - m.from.x) * e2; st.pos.z = m.from.z + (m.to.z - m.from.z) * e2; st.y = rise + (m.to.y - rise) * e2; }
@@ -923,12 +924,12 @@ function run(G, W, opts) {
     // ── The chores: the hen's room. Gerda sets the task and leaves; the mechanics are the test level's (js/level.js), the hen's way of going on the Market Road's cow's. ──
     async function choreScene(skip) {
       G.skipping = false;
-      const ease = k => k * k * (3 - 2 * k), W3 = (a, b, k) => a + (b - a) * k, IT = M.items, gp = k => IT[k].g, FLOOR = 0.5 * FULL;
+      const ease = k => k * k * (3 - 2 * k), W3 = (a, b, k) => a + (b - a) * k, IT = M.items, gp = k => IT[k].g, FLOOR = (opts.ch4day2 ? 0.15 : 0.5) * FULL;
       const cushionG = gp('henCushion'), cushion = cushionG.position, hen = cushionG.userData.hen;
       const roostD = M.doors.find(d => d.axis === 'z' && Math.abs(d.fixed + 208) < 3 && Math.abs(d.c - 273) < 8);
       const mk = (w, h, d, col, x, y, z, par) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), root.Farm.plain(col)); m.position.set(x, y, z); par.add(m); return m; };
-      const SQUAWK_LIMIT = 12, TIME_LIMIT = 300, SPILL_ABOVE = 27, RUNNING = 38, ALARM_R = 34, BUCKET = 50;
-      if (!skip) G.save({ step: 'ch3chores' });
+      const D2 = !!opts.ch4day2, SQUAWK_LIMIT = 12, TIME_LIMIT = D2 ? 420 : 300, SPILL_ABOVE = 27, RUNNING = 38, ALARM_R = 34, BUCKET = 50;
+      if (!skip && !D2) G.save({ step: 'ch3chores' });
       $('cwPanel').style.display = 'none'; G.hud.objective(''); G.mode = 'cutscene'; G.skipping = false; G.cwState = st;
       { const f = $('fade'); f.style.transition = 'none'; f.style.opacity = 1; }
       st.scene = true; st.frozen = false; st.boxed = false; st.inHand = false; st.guard = null; st.fz = null; st.gaze = null; st.pose = null; st.vy = 0; st.walkN = 0; st.seated = false;
@@ -964,7 +965,7 @@ function run(G, W, opts) {
         if (bird) for (const a of [-0.5, 0, 0.5]) { const t = mk(0.5, 0.2, 2.2, '#3a2a18', Math.sin(a) * 1.3, 0, Math.cos(a) * 1.3, g); t.rotation.y = a; } else { mk(2.6 * size, 0.2, 6 * size, '#3a2a18', 0, 0, 0, g); mk(2 * size, 0.2, 1.6 * size, '#3a2a18', 0, 0, 3.8 * size, g); }
         M.room.add(g); prints.push({ g, x, z, amount: 1 }); if (prints.length > 90) { const o = prints.shift(); M.room.remove(o.g); } };
       const S = {}, H = { pos: new V3(), target: new V3() };
-      const freshS = () => ({ sitting: false, dirt: 0, stride: 0, foot: 1, holding: null, water: 0, spillAcc: 0, spillCool: 0, chores: { sweep: false, dish: false, water: false, trust: false }, troughLevel: 0, speedN: 0, mv: 0, px: st.pos.x, pz: st.pos.z, stroke: 0, sweeping: false, sweepT: 99, workP: null, soothedAt: 0, soothN: 0, messN: 0, t: 0, done: false, doneAt: 0, scooping: false, binOpen: false, binRaids: 0, squawkT: 0, lie: false, sTarget: st.s, ended: false });
+      const freshS = () => ({ sitting: false, dirt: 0, stride: 0, foot: 1, holding: null, water: 0, spillAcc: 0, spillCool: 0, chores: { sweep: false, dish: false, water: false, trust: false }, troughLevel: 0, speedN: 0, mv: 0, px: st.pos.x, pz: st.pos.z, stroke: 0, sweeping: false, sweepT: 99, workP: null, soothedAt: 0, soothN: 0, messN: 0, t: 0, done: false, doneAt: 0, scooping: false, binOpen: false, binRaids: 0, squawkT: 0, lie: false, sTarget: st.s, ended: false, egg: 0, taking: false, tuck: false, sqAt: 0, w0: 0, grew: {}, hint: 0 });
       const freshH = () => ({ mode: 'rest', trust: 50, restLeft: 15, timer: 2, cool: 0, heading: Math.PI, bob: 0, y: 9, scratch: 0, coax: 0, dirt: 0, stride: 0, tgtP: null, dirtWait: 0, sndT: 2, drinkT: 14, drink: 0, splashCool: 0, binCool: 0, binWait: 0 });
       const restFor = t => t >= 100 ? Infinity : 5 + 0.2 * t;       // (as in the test level: at least five seconds, two more for every ten per cent of trust, and at full trust she stays)
       const itm = { broom: { where: 'home', x: 0, z: 0 }, bucket: { where: 'home', x: 0, z: 0 } };
@@ -1003,6 +1004,21 @@ function run(G, W, opts) {
       const mess = p => { p.amount = Math.min(1, p.amount + 0.7); if (Math.random() < 0.6) { const ang = Math.random() * 6.28; addPatch(p.x + Math.cos(ang) * 11, p.z + Math.sin(ang) * 11, 0.8); } S.chores.sweep = false;
         S.messN++; if (S.messN === 1 || S.messN % 4 === 0) G.caption('jack', ['Oh, no. She’s making more of a mess than I’m clearing!', 'She’s undoing it as fast as I sweep!', 'Not there, girl! I only just cleared that.'][(S.messN / 4 | 0) % 3]); };
       const cluck = (kind, v0) => { A && A.cluck && A.cluck(kind, v0); };
+      // day two: the golden egg. Laid on the cushion's edge; folded into the front of his tunic when he takes it
+      const eggMesh = par => { mk(3.2, 1.2, 3.2, '#e8b830', 0, 0.6, 0, par); mk(4.6, 3.6, 4.6, '#f4c840', 0, 3, 0, par); mk(3.4, 1.6, 3.4, '#e8b830', 0, 5.6, 0, par); mk(1.8, 0.8, 1.8, '#f8da70', 0, 6.8, 0, par); };
+      const eggG = new THREE.Group(); eggMesh(eggG); eggG.scale.setScalar(1.3); eggG.visible = false; M.room.add(eggG);
+      const eggAt = new V3(cushion.x + 8, 9, cushion.z + 2), eggT = new THREE.Group(); eggMesh(eggT); eggT.scale.setScalar(0.5); eggT.position.set(0, 3.6, 3.4); eggT.visible = false; jackOut.torso.add(eggT);       // (the bulge in his tunic)
+      const takeEgg = async () => {       // (he folds it into the front of his tunic, and the hen takes it ill)
+        if (S.egg !== 1) return; S.egg = 2; S.taking = true; S.egg2At = S.t; S.w0 = S.sTarget; H.trust = Math.max(0, H.trust - 10);
+        for (let k = 1; k <= 10; k++) { st.pose = { neckX: 0.55 * k / 10, torso: 0.35 * k / 10, armLx: -0.9 * k / 10, armRx: -0.9 * k / 10, elbowL: -0.5 * k / 10, elbowR: -0.5 * k / 10 }; await G.wait(0.04); }
+        eggG.visible = false; eggT.visible = true; A && A.blip && A.blip(); await G.wait(0.2);
+        for (let k = 1; k <= 8; k++) { st.pose = Object.assign({}, TUCK, { neckX: 0.55 + (0.25 - 0.55) * k / 8 }); await G.wait(0.04); }
+        S.taking = false; S.tuck = true; shrink(0.03, 'Taking the egg');
+        G.caption('jack', 'Forgive me. It’s all I can carry, and Mother’s frantic.');
+      };
+      const putEgg = () => { if (S.egg !== 2) return; S.egg = 1; S.tuck = false; eggT.visible = false; eggG.visible = true; S.sTarget = S.w0; S.sqAt = 0; S.listKey = ''; G.cue.set('goal', null); G.hud.objective(''); A && A.blip && A.blip(); G.caption('jack', 'No. It’s hers. Back it goes.'); };
+      const TUCK = { armLx: -0.75, armRx: -0.75, armLz: -0.2, armRz: 0.2, elbowL: -1.2, elbowR: -1.2, torso: 0.12, neckX: 0.25 };
+      const SFIT = 0.42, pctNow = () => st.s / FULL * 100;       // (a window's height to a boy: he fits it at about three tenths of his size)
       const updateHen = dt => {
         const hx = H.pos.x, hz = H.pos.z, d = dist(H.pos), sneaking = S.speedN < 18, running = S.speedN > RUNNING; H.cool = Math.max(0, H.cool - dt); H.splashCool = Math.max(0, H.splashCool - dt); H.binCool = Math.max(0, H.binCool - dt); H.bob += dt * (H.mode === 'flee' ? 18 : 5);
         if (H.mode !== 'rest') H.trust = Math.max(0, H.trust - 0.2 * dt);       // (unsettled, her trust leaks away)
@@ -1087,16 +1103,16 @@ function run(G, W, opts) {
         for (const q of prints) M.room.remove(q.g); prints.length = 0;
         Object.assign(S, freshS()); Object.assign(H, freshH()); H.pos.set(cushion.x, 0, cushion.z); H.restLeft = restFor(H.trust);
         itm.broom.where = itm.bucket.where = 'home'; setHeld(null); lid.rotation.x = 0; gp('henDish').userData.grain.visible = false; setTrough();
-        hen.position.set(cushion.x, 9, cushion.z); hen.rotation.set(0, Math.PI, 0); hen.visible = true; S.sTarget = st.s;
+        hen.position.set(cushion.x, 9, cushion.z); hen.rotation.set(0, Math.PI, 0); hen.visible = true; S.sTarget = st.s; eggG.visible = false; eggT.visible = false; G.cue.set('goal', null); st.jumpBoost = 1;
       };
       const playRound = () => new Promise(resolve => {
-        G.save({ step: 'ch3chorework', chSize: st.s });       // (a save point: the work begins)
+        if (!D2) G.save({ step: 'ch3chorework', chSize: st.s });       // (a save point: the work begins)
         st.chore = { S, H, patches, prints, itm }; st.scene = false; G.setMode('explore'); st.pose = null; st.camA = 0.15; st.pitch = 0.42; st.zoom = 1; camPos.set(0, 0, 0); st.heading = Math.PI; st.walkN = 0; G.hud.objective(''); S.px = st.pos.x; S.pz = st.pos.z;
         G.cut({ pos: v(st.pos.x + 55, 36, st.pos.z - 10), look: v(st.pos.x, 10, st.pos.z), fov: 48 });
-        let prevSweeping = false; const end = kind => { if (S.ended) return; S.ended = true; st.choreTick = null; resolve({ kind, clock: kind === 'time' }); };
+        let prevSweeping = false; const end = (kind, extra) => { if (S.ended) return; S.ended = true; st.choreTick = null; if (D2 && S.egg === 2) kind = 'climb'; resolve(Object.assign({ kind, clock: kind === 'time' }, extra)); };
         st.choreTick = dt => {
           S.t += dt; const sc = SC * st.s; carrier.scale.setScalar(1 / sc);
-          { const key = [S.chores.sweep, S.chores.dish, S.chores.water].join(); if (key !== S.listKey) { S.listKey = key; G.hud.objective([{ text: 'Sweep the floor', done: S.chores.sweep }, { text: 'Fill the hen’s dish', done: S.chores.dish }, { text: 'Fill the trough', done: S.chores.water }]); } }       // (the three things she asked: struck through as each is done)
+          if (!(D2 && S.egg === 2)) { const key = [S.chores.sweep, S.chores.dish, S.chores.water].join(); if (key !== S.listKey) { S.listKey = key; G.hud.objective([{ text: 'Sweep the floor', done: S.chores.sweep }, { text: 'Fill the hen’s dish', done: S.chores.dish }, { text: 'Fill the trough', done: S.chores.water }]); } }       // (the three things she asked: struck through as each is done)
           st.s += (S.sTarget - st.s) * Math.min(1, dt * 4);
           if (st.pos.z > -213) st.pos.z = -213;       // (the door is shut, and he stays in)
           { S.mv = Math.hypot(st.pos.x - S.px, st.pos.z - S.pz); const inst = S.mv / Math.max(dt, 1e-3) / (SC * Math.pow(st.s, 0.6)); S.speedN += (inst - S.speedN) * Math.min(1, dt * 8); S.px = st.pos.x; S.pz = st.pos.z; }
@@ -1113,8 +1129,23 @@ function run(G, W, opts) {
           if (S.holding === 'bucket' && S.water > 0 && S.speedN > SPILL_ABOVE) { const l = dt * 18 * (S.speedN - SPILL_ABOVE) / 23; S.water = Math.max(0, S.water - l); S.spillAcc += l; S.spillCool = Math.max(0, S.spillCool - dt); if (S.spillAcc >= 15 && S.spillCool <= 0) { S.spillAcc -= 15; S.spillCool = 1.5; shrink(0.02, 'Spilling the water'); addPatch(st.pos.x, st.pos.z, 0.6, null, 'water'); } }
           if (S.holding === 'bucket') { hWater.scale.y = Math.max(0.01, S.water / BUCKET); hWater.visible = S.water > 2; }
           if (S.sitting) { if (keys.up || keys.down || keys.left || keys.right || Math.hypot(stick.x, stick.y) > 0.3 || st.jumpReq) { st.jumpReq = false; standUp(); } else { const kick = (1 - clamp((st.s / FULL - 0.5) / 0.45, 0, 1)) * 0.9, t = S.t * 7; st.pose = { legLx: -1.5 + kick * 0.08 * Math.sin(t), legRx: -1.5 - kick * 0.08 * Math.sin(t), kneeL: 1.5 - 1.1 * kick * (0.5 + 0.5 * Math.sin(t)), kneeR: 1.5 - 1.1 * kick * (0.5 + 0.5 * Math.sin(t + Math.PI)), armLx: -0.25, armRx: -0.25, armLz: 0.15, armRz: -0.15, torso: 0, neckX: 0 }; } }
-          if (S.sitting) { /* (seated: the pose above) */ } else if (S.holding) { const sw = S.sweeping ? 0.3 * Math.sin(S.t * 14) : 0; st.pose = { armRx: (S.holding === 'broom' ? -0.9 : -1.15) + sw, armLx: S.holding === 'broom' ? -0.5 : -1.15, armRz: -0.1, armLz: 0.1 }; hBroom.rotation.z = S.sweeping ? 0.35 * Math.sin(S.t * 14) : 0; } else st.pose = null;
+          if (S.sitting) { /* (seated: the pose above) */ } else if (S.holding) { const sw = S.sweeping ? 0.3 * Math.sin(S.t * 14) : 0; st.pose = { armRx: (S.holding === 'broom' ? -0.9 : -1.15) + sw, armLx: S.holding === 'broom' ? -0.5 : -1.15, armRz: -0.1, armLz: 0.1 }; hBroom.rotation.z = S.sweeping ? 0.35 * Math.sin(S.t * 14) : 0; } else if (S.tuck && !S.taking) st.pose = TUCK; else if (!S.taking) st.pose = null;
           updateHen(dt);
+          if (D2) {
+            // the chores done well put some of him back
+            for (const c of ['sweep', 'dish', 'water', 'trust']) if (S.chores[c] && !S.grew[c] && S.egg !== 2) { S.grew[c] = 1; S.sTarget = Math.min(0.8 * FULL, S.sTarget + 0.03 * FULL); toast('A job well done: +3%', 2400); }
+            // she lays, before she has quite given him her trust: settled on her cushion, and warming to him
+            if (!S.egg && H.mode === 'rest' && onCushion(H.pos) && S.t > 12 && (H.trust >= 55 || H.trust >= 100)) { S.egg = 1; eggG.position.copy(eggAt); eggG.visible = true; cluck('content', 1); A && A.blip && A.blip(); toast('The hen shifts, and clucks, and there is a golden egg in her nest.', 4200); G.caption('jack', 'An egg. A golden one, as big as my head.'); }
+            st.jumpBoost = S.egg === 2 ? 1.3 : 1;       // (with the egg in his tunic and the door shut, he jumps higher than he should)
+            if (S.egg === 2) {
+              const p = clamp((st.y - 4) / 36, 0, 1);       // (how far up he is: the higher, the smaller, till he would fit the window)
+              S.sTarget = S.w0 * (1 - 0.6 * p);
+              if (!S.sqAt && p >= clamp(0.9 * H.trust / 100, 0.08, 0.9)) { S.sqAt = S.t; cluck('squawk'); if (H.mode !== 'flee') flee(st.pos); G.caption('jack', 'Shh! Hush, girl, hush!'); toast('The hen squawks!', 2600); }
+              if (st.y >= 43 && st.pos.z < -306 && st.pos.x > 284 && st.pos.x < 322) end('climb', { window: true }); else if (S.sqAt && S.t - S.sqAt > (H.trust >= 95 ? 7 : 4)) end('climb', { window: p >= 0.85 });       // (she is some way off: at full trust, long enough for him to be at the top)
+              if (S.listKey !== 'out') { S.listKey = 'out'; G.hud.objective('The door is shut. Find another way out.'); G.cue.set('goal', { x: 308, z: -318, r: 14 }); }
+              if (!S.hint && S.t - S.egg2At > 12) { S.hint = 1; toast('Climb the crates and the shelves, up to the high window. Smaller, you will fit.', 6000); }
+            }
+          }
           if (H.trust >= 100 && H.mode === 'rest' && !S.chores.trust) { S.chores.trust = true; toast('The hen settles on her cushion, and lets you near. ✔', 3000); }
           if (H.trust < 100 && S.chores.trust && H.mode !== 'rest') S.chores.trust = false;
           // E: an action (the nearest); Q: take up or put down
@@ -1126,6 +1157,8 @@ function run(G, W, opts) {
             else { if (S.holding === 'broom') addQ(rackP, 28, 'Hang up the broom', () => putHome('broom')); if (S.holding === 'bucket') addQ(buckP, 24, 'Put the bucket back', () => { if (S.water > 0) dumpWater('Putting it back full'); putHome('bucket'); }); if (S.holding === 'grain') addQ(binP, 26, 'Tip it back', () => setHeld(null)); fQ = { d: 1e9, label: 'Put it down', fn: drop }; }
             addE(binP, 26, S.binOpen ? 'Close the bin' : 'Open the bin', S.binOpen ? closeBin : openBin);
             if (!S.holding) addE(chairP, 26, 'Sit on the chair', sit);
+            if (D2 && S.egg === 1 && !S.holding && !S.taking && dist(eggAt) < 24) bE = { d: 0, label: 'Take the egg', fn: takeEgg, p: eggAt };       // (the egg before the hen, when they are both in reach)
+            if (D2 && S.egg === 2 && !S.taking && st.y < 3 && Math.hypot(eggAt.x - st.pos.x, eggAt.z - st.pos.z) < 26) addQ(eggAt, 26, 'Put the egg back', putEgg);
             if (S.holding === 'broom') fE = { d: 1e9, label: 'Sweep', fn: () => { S.stroke = 0.9; } };
             if (S.holding === 'bucket') { addE(wellP, 32, S.water < BUCKET ? 'Fill the bucket' : 'Full', () => { if (S.water < BUCKET) { S.water = BUCKET; S.spillAcc = 0; toast('You fill the bucket. Walk, so that it does not slop.', 2600); } }); if (S.water > 0) addE(troughP, 34, 'Pour into the trough', pour); if (S.water > 0) fE = { d: 1e9, label: 'Pour it out', fn: () => dumpWater('Pouring the water out') }; }
             if (S.holding === 'grain') addE(dishP, 22, 'Fill the dish', () => { if (Math.hypot(H.pos.x - dishP.x, H.pos.z - dishP.z) < 9) { toast('The hen is in the way of the dish.', 2400); return; } gp('henDish').userData.grain.visible = true; setHeld(null); S.chores.dish = true; toast('You fill her dish with grain. ✔', 2600); });
@@ -1141,7 +1174,7 @@ function run(G, W, opts) {
           // how the round ends: the hen left squawking, everything done (and a few moments to be sure), or the clock
           const done = ['sweep', 'dish', 'water', 'trust'].every(c => S.chores[c]) && itm.broom.where === 'home' && itm.bucket.where === 'home' && !S.holding;       // (not done until it is all put away)
           if (done && !S.doneAt) S.doneAt = S.t; if (!done) S.doneAt = 0;
-          if (S.squawkT > SQUAWK_LIMIT) end('squawk'); else if (S.doneAt && S.t - S.doneAt > 4) end('done'); else if (S.t > TIME_LIMIT) end('time');
+          const tucked = D2 && S.egg === 2; if (S.squawkT > SQUAWK_LIMIT) end('squawk'); else if (!tucked && S.doneAt && S.t - S.doneAt > 4) end('done'); else if (!tucked && S.t > TIME_LIMIT) end('time');
         };
       });
       // ── Gerda comes back, and asks how it went ──
@@ -1172,6 +1205,7 @@ function run(G, W, opts) {
         const ci = await G.choose('jack', ['Tell her exactly what happened', 'Say it all went perfectly']);
         const lie = ci === 1 && rs.length > 0; if (lie) { S.lie = true; shrink(0.05, 'Lying to Gerda'); }
         await sayW('jack', ci === 0 ? (rs.length ? 'I ' + listOf(rs) + '.' : 'Everything done, and she lets me near her.') : 'It all went perfectly.');
+        if (!rs.length && D2 && S.egg === 1) { await sayW('gerda', 'And what is this, in her nest? She has laid, with you in the room, and you have not so much as touched it.'); await sayW('gerda', 'Not once, in all these years, has she laid for me.'); }
         if (!rs.length) { await sayW('gerda', ci === 0 ? 'Good. I like it when it is true.' : 'It is true, too. Well done.'); W.paintJack(jackOut, { outfit: 'Day', trousers: 'up', drawers: 'up', expr: 'smile' }); await sayW('gerda', 'Good boy.'); await sayW('gerda', 'And you’re filthy, after all that. Come along. I’ve run you a nice warm bath.'); await sayW('jack', 'A bath? …Thank you, Gerda.'); return { praised: true }; }
         const plan = buildPlan(0);
         await sayW('gerda', ci === 0 ? 'Thank you for telling me straight. Let us go through it.' : 'Does it? Let us go through it, then.');
@@ -1181,8 +1215,9 @@ function run(G, W, opts) {
         return { plan };
       };
       // ── the correction, over her knee in the roost ──
-      const roostDiscipline = async plan => {
+      const roostDiscipline = async (plan, at) => {
         if (!root.Lap) return;
+        const chairG = at ? at.g : gp('roostChair'), chairP = chairG.position;       // (the roost's chair, or the nursery's when he is corrected there)
         const LAP_S = 1.4, LAP_Y = 6 * LAP_S;
         await G.fade(true, 0.7);
         const lap = root.Lap.create(null, { external: { scene, camera: G.camera, renderer: G.renderer }, table: false, jackFull: 0.95 });
@@ -1193,7 +1228,7 @@ function run(G, W, opts) {
         const Co = root.Correction, cam = Co.freeCam(G, roomBox(chairP.x, chairP.z)), panel = Co.ui(), camBtn = document.getElementById('corrCam'), redBtn = document.getElementById('corrRed'), RED = { red: true }; G.fc = cam.fc;
         let red = false, shown = null; redBtn.onclick = () => { red = true; lap.red(); G.captionOff && G.captionOff(); };
         const showUI = on => panel.classList.toggle('on', !!on);
-        const stageView = (name, ms) => { const V = lap.views[name]; lap.stage.updateMatrixWorld(true); const P = lap.stage.localToWorld(v(...V.pos)); if (ms === 0) { P.x = clamp(P.x, 258, 412); P.z = clamp(P.z, -324, -214); P.y = Math.min(P.y, 60); } cam.go(P, lap.stage.localToWorld(v(...V.at)), 46, ms == null ? 700 : ms); shown = name; };
+        const stageView = (name, ms) => { const V = lap.views[name]; lap.stage.updateMatrixWorld(true); const P = lap.stage.localToWorld(v(...V.pos)); if (ms === 0 && !at) { P.x = clamp(P.x, 258, 412); P.z = clamp(P.z, -324, -214); P.y = Math.min(P.y, 60); } cam.go(P, lap.stage.localToWorld(v(...V.at)), 46, ms == null ? 700 : ms); shown = name; };
         const SETV = ['overview', 'behind', 'shoulder', 'face']; camBtn.onclick = () => stageView(SETV[(SETV.indexOf(shown) + 1) % SETV.length]);
         const say = async (who, text) => { if (red) throw RED; await G.say(who, text); if (red) throw RED; };
         const wait = async s => { await G.wait(s); if (red) throw RED; };
@@ -1226,12 +1261,125 @@ function run(G, W, opts) {
         W.paintJack(jackOut, { outfit: 'Day', expr: 'shy', trousers: 'up', drawers: 'up' }); await sayW('jack', 'Yes, Gerda.');
         rubbing = false; await rubber; await G.fade(true, 0.9); st.pose = null; gst.seated = 0; gst.y = 0;
       };
+
+      // ══ Day two: Gerda comes to the squawking, and finds him on the way out ══
+      const openDoor = async () => { const a1 = (doorTo(Math.PI / 2, true), roostD ? roostD.lg.rotation.y : 0); if (roostD) { roostD.lg.rotation.y = 0; roostD.og.userData.noCollide = true; A && A.latch && A.latch(); for (let i = 1; i <= 24; i++) { roostD.lg.rotation.y = a1 * ease(i / 24); await G.wait(0.04); } roostD.lg.rotation.y = a1; } };
+      const gIn = () => { Object.assign(gst, { x: 273, z: -196, h: Math.PI, y: 0, seated: 0, walk: 0, reach: 0, lreach: 0, bend: 0, look: 0.2, headY: 0, p50: null, hold: 0, alive: 1 }); placeGerda(); gerda.root.visible = true; };
+      const seatGerda = cp => { Object.assign(gst, { x: cp.x, z: cp.z, h: -Math.PI / 2, y: 5.1, seated: 1, walk: 0, reach: 0, lreach: 0, bend: 0, look: 0.3, headY: 0, p50: null, hold: 0, alive: 1 }); gerda.root.visible = true; placeGerda(); root.Blocky.step(gerda, 0); root.Blocky.seatFeet && root.Blocky.seatFeet(gerda, 0); };
+      const freezeJack = () => { st.choreTick = null; st.jumpBoost = 1; G.hud.meter('trust', null); dbgEl.style.display = 'none'; G.hud.objective(''); G.cue.set('goal', null); st.uiAct = null; st.uiDrop = false; G.captionOff && G.captionOff(); st.scene = true; G.mode = 'cutscene'; st.cl = null; st.mant = null; st.vy = 0; st.walkN = 0; st.jumpReq = false; st.air = false; st.seated = false; };
+      const W3s = (a, b, k) => a + (b - a) * k;
+      // at the window: she is in time to see him, and not in time to stop him
+      const escapeScene = async () => {
+        freezeJack(); st.pos.set(308, 0, -324); st.y = 44; st.standY = 44; st.heading = Math.PI; st.pose = TUCK; S.tuck = true; eggT.visible = true;
+        G.cut({ pos: v(340, 62, -250), look: v(300, 38, -296), fov: 56 }); gIn(); await openDoor();
+        const cross = walkG([[273, -214], [296, -268]]);
+        await sayW('gerda', 'Jack! Down from there this instant!');
+        for (let i = 1; i <= 14; i++) { st.heading = Math.PI * (1 - ease(i / 14)); await G.wait(0.04); }
+        W.paintJack(jackOut, { outfit: 'Day', trousers: 'up', drawers: 'up', expr: 'wince' });
+        await sayW('jack', 'I’m sorry, Gerda. I’m so sorry.'); await cross;
+        await sayW('gerda', 'What have you got folded in your tunic?');
+        await sayW('jack', 'The only thing I could carry home. Mother’s frantic, and I can’t go back with nothing.');
+        await sayW('gerda', 'Jack. Do not you dare—');
+        await sayW('jack', 'I’m sorry!');
+        for (let i = 1; i <= 16; i++) { const k = ease(i / 16); st.heading = Math.PI * k + 0 * (1 - k); st.pos.z = W3s(-324, -341, k); st.y = W3s(44, 42, k); st.walkN = 1; st.walkPh += 0.5; await G.wait(0.04); }
+        st.walkN = 0; await G.wait(0.4); await G.fade(true, 1.4); return { next: 'escape' };
+      };
+      // the box, and the hours in it
+      const boxScene = async () => {
+        await G.fade(true, 0.8);
+        const it = M.items.keepsakeBox, bx = it.g, box = bx.userData.box; bx.position.set(it.def.x, it.y, it.def.z); bx.rotation.set(0, it.def.ry || 0, 0); box.lid.rotation.x = -1.95;
+        const bs = SC * st.s, YQ = new THREE.Quaternion().setFromAxisAngle(v(0, 1, 0), Math.PI / 2); st.pose = { thigh: 0, knee: 0, armLx: 0.05, armLz: 0.3, armRx: 0.05, armRz: -0.3, torso: 0.05, neckX: 0.25 }; eggT.visible = false; S.tuck = false;
+        bx.add(jackOut.root); jackOut.root.scale.setScalar(bs); jackOut.root.quaternion.copy(YQ); jackOut.root.position.set(0, 1.2, 0.7).applyQuaternion(YQ); jackOut.root.visible = true;
+        W.paintJack(jackOut, { outfit: 'Day', trousers: 'up', drawers: 'up', expr: 'wince' });
+        const bp = bx.position; Object.assign(gst, { x: bp.x + 26, z: bp.z, h: -Math.PI / 2, y: 0, seated: 0, walk: 0, reach: 0, lreach: 0, bend: 0.1, look: 0.2, headY: 0, p50: null, hold: 0, alive: 1 }); gerda.root.visible = true; placeGerda();
+        G.cut({ pos: v(bp.x + 58, bp.y + 36, bp.z - 34), look: v(bp.x, bp.y + 14, bp.z), fov: 50 }); await G.fade(false, 0.8);
+        await sayW('gerda', 'In you stay. That is where you will be until bedtime.');
+        await sayW('jack', 'Gerda, please. I’ll be good, I promise—');
+        await sayW('gerda', 'You may do your thinking in the dark.');
+        for (let i = 1; i <= 24; i++) { box.lid.rotation.x = -1.95 * (1 - ease(i / 24)); gst.reach = gst.lreach = 1.0 * Math.sin(Math.PI * i / 24); placeGerda(); await G.wait(0.04); }
+        gst.reach = gst.lreach = 0; A && A.thud && A.thud(0.6); await G.fade(true, 0.9); gerda.root.visible = false; await G.wait(0.6);
+        await sayW('jack', 'It’s so dark in here.'); await G.wait(1.2);
+        await sayW('jack', 'I couldn’t tell you how long it has been. Hours. I only know the box is the same size as ever, and I am the one who has changed.');
+        gerda.root.visible = true; gst.h = -Math.PI / 2; placeGerda(); A && A.latch && A.latch(0.6);
+        for (let i = 1; i <= 40; i++) { const k = ease(i / 40); box.lid.rotation.x = -1.95 * k; $('fade').style.opacity = 1 - Math.min(1, k * 1.3); gst.reach = gst.lreach = 1.0 * k; placeGerda(); await G.wait(0.04); }
+        $('fade').style.transition = ''; $('fade').style.opacity = 0;
+        await sayW('gerda', 'It is bedtime. Out you come.');
+        await G.fade(true, 0.8); scene.attach(jackOut.root); jackOut.root.quaternion.identity(); box.lid.rotation.x = 0; gst.reach = gst.lreach = 0; st.pose = null;
+      };
+      // the nursery: she asks, and he is honest, or is sent to try again
+      const nurseryTalk = async () => {
+        const ch = M.items.nurseryChair.g, cp = ch.position;
+        await G.fade(true, 0.5); scene.attach(jackOut.root); jackOut.root.quaternion.identity(); jackOut.root.visible = true; st.scene = true; G.mode = 'cutscene'; st.boxed = false; st.inHand = false; st.cl = null; st.mant = null; st.air = false; st.pose = null; st.walkN = 0; st.fz = null; st.y = 0; st.standY = 0; ch.visible = true; eggT.visible = false; S.tuck = false;
+        seatGerda(cp); st.pos.set(cp.x - 30, 0, cp.z); st.heading = Math.PI / 2; W.paintJack(jackOut, { outfit: 'Day', trousers: 'up', drawers: 'up', expr: 'shy' });
+        if (A && A.ctx) A.startMusic({ theme: 'nursery' });
+        G.cut({ pos: v(cp.x - 44, 28, cp.z - 48), look: v(cp.x - 14, 18, cp.z), fov: 44 }); await G.fade(false, 0.9); await G.wait(0.5);
+        await sayW('gerda', 'Now. You and I are going to talk, and you are going to tell me the whole of it. Every word of it true.');
+        const grow = async gain => { const to = Math.min(FULL, st.s + gain), from = st.s; toast('The truth: +' + Math.round((to - from) / FULL * 100) + '%', 2600); for (let i = 1; i <= 20; i++) { st.s = W3s(from, to, ease(i / 20)); await G.wait(0.04); } };
+        const QS = [
+          ['Let us begin with what you were carrying. What did you mean to do with my hen’s egg?', 'I meant to carry it home to my mother.', 'I was only going to look at it, and put it back.'],
+          ['And the window. You meant to be gone before I came back. Was that the plan?', 'Yes. I meant to go, and not come back.', 'No. I only wanted the air.'],
+          ['Why, Jack? I have fed you, and washed you, and put you to bed.', 'Because we have nothing at home, and Mother won’t have me back without something to show for it. I’m afraid of her.', 'Because I was bored.']];
+        for (let q = 0; q < QS.length; q++) {
+          const [ask, yes, no] = QS[q];
+          for (let tries = 0; ; tries++) {
+            await sayW('gerda', tries ? 'Again. And this time, the truth.' : ask);
+            const flip = (q + tries) % 2, c = await G.choose('jack', flip ? [no, yes] : [yes, no]), truth = (c === 0) !== !!flip;
+            W.paintJack(jackOut, { outfit: 'Day', trousers: 'up', drawers: 'up', expr: truth ? 'shy' : 'squint' });
+            await sayW('jack', truth ? yes : no);
+            if (truth) { await grow(Math.max(0.06 * FULL, (0.5 * FULL - st.s) / (QS.length - q))); break; }
+            await sayW('gerda', 'No. I did not ask for a story.'); st.s = Math.max(FLOOR, st.s - 0.02 * FULL); toast('A lie: −2%', 2200);
+          }
+        }
+        st.s = Math.max(st.s, 0.5 * FULL);
+        await sayW('gerda', 'Thank you. That is harder to say than it is to hear.');
+        await sayW('gerda', 'And now, you know there is a price for it, and you know what it is. Come here.');
+        await roostDiscipline(buildPlan(2), { g: ch });
+      };
+      // she is in time for the climb, but not at the window
+      const caughtScene = async out => {
+        freezeJack(); const px = st.pos.x, pz = st.pos.z;
+        G.cut({ pos: v(clamp(px + 50, 262, 410), 46, clamp(pz + 44, -324, -216)), look: v(px, st.y + 8, pz), fov: 50 }); gIn(); await openDoor();
+        const cross = walkG([[273, -214], [clamp(px, 270, 408), clamp(pz + 36, -318, -222)]]);
+        await sayW('gerda', 'Jack! What is that noise? What have you done to her?'); await cross;
+        gst.h = Math.atan2(px - gst.x, pz - gst.z); placeGerda();
+        await sayW('gerda', 'Down from there. Now.');
+        await G.fade(true, 0.5);
+        const fx = Math.sin(gst.h), fz = Math.cos(gst.h); st.pos.set(gst.x + fx * 24, 0, gst.z + fz * 24); st.y = 0; st.standY = 0; st.heading = gst.h + Math.PI; st.pose = TUCK; hen.position.set(cushion.x, 9, cushion.z);
+        { const sd = gst.x + 50 > 410 ? -1 : 1; G.cut({ pos: v(gst.x + sd * 50, 38, clamp(gst.z + 4, -318, -222)), look: v(gst.x + fx * 12, 20, gst.z + fz * 12), fov: 48 }); } await G.fade(false, 0.5);
+        W.paintJack(jackOut, { outfit: 'Day', trousers: 'up', drawers: 'up', expr: 'wince' });
+        await sayW('gerda', 'And what is it, exactly, that you have folded into the front of your tunic?');
+        await sayW('jack', '…Nothing, Gerda.'); await sayW('gerda', 'Jack.');
+        eggT.visible = false; S.tuck = false; st.pose = null; A && A.blip && A.blip();
+        await sayW('jack', 'It’s the hen’s egg. She laid it, and I took it.');
+        await sayW('gerda', 'Not once, in all these years, has she laid for me. She lays for you, and you carry it up my shelves towards the window.');
+        eggG.position.copy(eggAt); eggG.visible = true;
+        const pct = pctNow();
+        if (pct > 50) {
+          await sayW('gerda', 'You were asked for one thing, and that was to be gentle. You shall be corrected for it, here, and properly.');
+          await roostDiscipline(buildPlan(2));
+          await sayW('gerda', 'And now a bath. You are dusty to the eyebrows.'); return { next: 'bath', tier: 2 };
+        }
+        if (pct >= 25) { await sayW('gerda', 'You and I are going to have a talk, Jack. In the nursery.'); await G.fade(true, 0.8); await nurseryTalk(); return { next: 'bed', tier: 2 }; }
+        await sayW('gerda', 'Look at the size of you. Small enough to lose in a pocket, and still you think you may do as you please.');
+        await sayW('gerda', 'The box, I think, until bedtime.'); await sayW('jack', 'Gerda, please—'); await sayW('gerda', 'Not another word.');
+        await boxScene(); await nurseryTalk(); return { next: 'bed', tier: 2 };
+      };
       // ── the sequence ──
       places(); resetRoom(); W.paintJack(jackOut, { outfit: 'Day', trousers: 'up', drawers: 'up', expr: 'shy' });
       if (A && A.ctx) A.startMusic({ theme: 'castle' });
       CAM_BOTH();       // (the camera is in the room before the fade lifts, however the scene was reached)
       await G.fade(false, 1.2);
-      if (!skip) {
+      if (!skip && D2) {
+        await G.wait(0.6);
+        await sayW('gerda', 'Here we are again. The hen has been asking after you.');
+        G.cut({ pos: v(276, 36, -230), look: v(320, 10, -270), fov: 46 }); faceG(cushion.x, cushion.z, 0.8);
+        await sayW('gerda', 'She has been off her cushion since morning, and the floor shows it. Sweep it, fill her dish and her trough, the same as yesterday.');
+        await sayW('gerda', 'And be gentle with her. She has not been herself, and I think she has been missing a little company.');
+        CAM_BOTH(); faceG(st.pos.x, st.pos.z, 0.7);
+        await nod(1); await sayW('jack', 'Yes, Gerda. I’ll be gentle.');
+        await sayW('gerda', 'Good boy. I shall be back before the afternoon is out. The door stays shut.');
+        await leave();
+      } else if (!skip) {
         await G.wait(0.6);
         await sayW('gerda', 'Seeing as sitting patiently didn’t go so well, I have something to keep you in one place this afternoon. Nothing grand. Just care.');
         await nod(1); await sayW('jack', 'Yes, Gerda.');
@@ -1254,15 +1402,17 @@ function run(G, W, opts) {
         await sayW('gerda', 'Good boy. I shall be back before the afternoon is out, and I shall want to see all of it done. Be good.');
         await leave();
       } else { if (roostD) { roostD.lg.rotation.y = 0; roostD.og.userData.noCollide = false; } gerda.root.visible = false; }       // (resumed at the work: the briefing is behind him, and the door shut)
-      let everLied = false;
+      let everLied = false, tierOut = 0;
       for (let round = 0; ; round++) {
-        const out = await playRound(), res = await returnScene(out); if (S.lie) everLied = true;
-        if (res.praised) { G.ch3log = Object.assign(G.ch3log || {}, { rounds: round, choreLied: everLied }); await walkOut(); break; }
+        const out = await playRound(); if (D2 && out.kind === 'climb') return out.window ? await escapeScene() : await caughtScene(out);
+        const res = await returnScene(out); if (S.lie) everLied = true;
+        if (res.praised) { G.ch3log = Object.assign(G.ch3log || {}, { rounds: round, choreLied: everLied }); await walkOut(); tierOut = round > 0 || everLied ? 1 : 0; break; }
         await roostDiscipline(res.plan);
         places(); resetRoom(); W.paintJack(jackOut, { outfit: 'Day', trousers: 'up', drawers: 'up', expr: 'shy' }); await G.fade(false, 0.9);       // (the level resets, and she sends him back to it)
         CAM_BOTH(); await G.wait(0.5); await sayW('gerda', 'Again, then. Sweep, feed and water, and gently with the hen. Properly, this time.'); await nod(1); await sayW('jack', 'Yes, Gerda.'); await leave();
       }
       st.seated = false; for (const q of prints) M.room.remove(q.g); G.hud.meter('trust', null); dbgEl.style.display = 'none'; G.hud.objective(''); st.pose = null; st.uiAct = null; hBroom.visible = hBucket.visible = hGrain.visible = false;
+      return D2 ? { next: 'bath', tier: tierOut } : undefined;
     }
     // ── Bath time: in the bathroom, with the door shut. Gerda kneels to take his things off, one at a time; then he is in the water, and she takes a sponge to him. ──
     async function bathScene(from, washPick, bedTier) {
@@ -2132,6 +2282,7 @@ function run(G, W, opts) {
       if (opts.ch3dress) { st.scene = true; st.s = 0.7; makeG('Work'); G.gerdaNamed = true; G.mode = 'cutscene'; if (A && A.ctx && !opts.ch3notes) A.startMusic({ theme: 'castle' }); await dressScene(); await choreScene(); await bathScene(); await finish('bed'); return; }
       if (opts.ch3chores) { st.scene = true; st.s = opts.chSize || 0.98; makeG('Work'); G.gerdaNamed = true; G.mode = 'cutscene'; await choreScene(!!opts.ch3chorework); await bathScene(); await finish('bed'); return; }
       if (opts.ch4wake) { st.scene = true; st.s = WAKE_S; makeG('Work'); gerda.root.visible = false; G.gerdaNamed = true; $('cwPanel').style.display = 'none'; G.hud.objective(''); await wakeScene(); if (!opts.wakeOnly) { await G.fade(true, 0.8); await breakfastScene(); await finish('breakfast'); } else await finish('wake'); return; }
+      if (opts.ch4day2) { st.scene = true; st.s = WAKE_S; makeG('Work'); G.gerdaNamed = true; G.mode = 'cutscene'; $('cwPanel').style.display = 'none'; G.hud.objective(''); const r = await choreScene(!!opts.day2skip); if (r && r.next === 'escape') { await finish('escape'); return; } await bathScene(r && r.next === 'bed' ? 'bed' : undefined, undefined, r ? r.tier : undefined); await finish('ch4bed'); return; }
       if (opts.ch4breakfast) { st.scene = true; st.s = WAKE_S; makeG('Work'); G.gerdaNamed = true; $('cwPanel').style.display = 'none'; G.hud.objective(''); await breakfastScene(); await finish('breakfast'); return; }
       if (opts.ch3bath) { st.scene = true; st.s = opts.chSize || 0.98; makeG('Work'); G.gerdaNamed = true; G.mode = 'cutscene'; await bathScene(opts.bathFrom, opts.bathWash, opts.bedTier); await finish('bed'); return; }
       if (opts.ch3disc) { st.scene = true; st.s = 0.5; makeG('Work'); st.pos.set(-294, 0, -172); G.mode = 'cutscene'; $('cwPanel').style.display = 'none'; G.hud.objective(''); if (A && A.ctx && !opts.ch3notes) A.startMusic({ theme: 'nursery' }); await disciplineScene(opts.ch3lies || 0); return; }       // (the correction is a scene of its own, after the one in which he is put across her knee)

@@ -52,7 +52,7 @@ root.CastleLayout = {
   tub: { x: 355, z: -177, ry: 0 },
   bathStool: { x: 367, z: -155, ry: 0 },
   henCushion: { x: 320, z: -269, ry: 0 },
-  crateTower: { x: 297, z: -319, ry: 0 },
+  crateTower: { x: 297, z: -321, ry: 0 },
   shelfTower: { x: 329, z: -319, ry: 0 },
   henRack: { x: 253, z: -230, ry: 1.571 },
   henBucket: { x: 257, z: -251, ry: 0 },
