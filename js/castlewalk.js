@@ -1139,8 +1139,8 @@ function run(G, W, opts) {
             // the chores done well put some of him back
             for (const c of ['sweep', 'dish', 'water', 'trust']) if (S.chores[c] && !S.grew[c] && S.egg !== 2) { S.grew[c] = 1; S.sTarget = Math.min(0.8 * FULL, S.sTarget + 0.03 * FULL); toast('A job well done: +3%', 2400); }
             // she lays, before she has quite given him her trust: settled on her cushion, and warming to him
-            if (!S.egg && H.mode === 'rest' && onCushion(H.pos) && S.t > 12 && H.trust >= 55) { S.egg = 0.5; S.layAt = S.t; cluck('content', 1); }       // (laid under her: it is seen when she gets up)
-            if (S.egg === 0.5 && (H.mode !== 'rest' || S.t - S.layAt > 25)) { S.egg = 1; eggG.position.copy(eggAt); eggG.visible = true; A && A.blip && A.blip(); st.lockH = Math.atan2(eggAt.x - st.pos.x, eggAt.z - st.pos.z); st.lockT = 2.6; G.caption('jack', 'An egg. A golden one, no bigger than my fist.'); toast('The hen has left a golden egg in her nest.', 4200); }       // (and he stops what he is doing to look)
+            if (!S.egg) { S.egg = 0.5; S.layAt = S.t; }       // (under her from the start: it is seen the first time she gets up)
+            if (S.egg === 0.5 && (H.mode !== 'rest' || (H.trust >= 100 && S.t - S.layAt > 25))) { S.egg = 1; eggG.position.copy(eggAt); eggG.visible = true; A && A.blip && A.blip(); st.lockH = Math.atan2(eggAt.x - st.pos.x, eggAt.z - st.pos.z); st.lockT = 2.6; G.caption('jack', 'An egg. A golden one, no bigger than my fist.'); toast('The hen has left a golden egg in her nest.', 4200); }       // (and he stops what he is doing to look)
             st.jumpBoost = S.egg === 2 ? 1.3 : 1; st.rackLadder = S.egg === 2;       // (with the egg in his tunic and the door shut, he jumps higher than he should)
             if (S.egg === 2) {
               const p = clamp((st.y - 4) / 36, 0, 1);       // (how far up he is: the higher, the smaller, till he would fit the window)
